@@ -3,7 +3,6 @@ package com.craftworks.music.ui.tv
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +56,11 @@ import com.kyant.backdrop.Backdrop
  * screen, which arrives with the P2 screens. The ring is drawn as an inset border for now; the
  * true outside-the-clip halo is part of the P2 primitive components (the bar is clipped by its own
  * pill, so an outside ring would need the halo primitive applied to it).
+ *
+ * DOWN leaves the bar (spec §5.4): every tab points its `down` at [contentFocusRequester], which
+ * the shell attaches to the content slot's focus group. This is wired rather than left to
+ * two-dimensional search, which has to guess which of a full-screen list's items is "below" a
+ * floating pill. The Row is deliberately *not* a focus group — as a group it swallowed the exit.
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -66,6 +70,7 @@ fun TvTopTabBar(
     onTabSelected: (TvTab) -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester,
+    contentFocusRequester: FocusRequester,
 ) {
     val colors = LocalTvColors.current
     val type = LocalTvTypography.current
@@ -82,8 +87,7 @@ fun TvTopTabBar(
             .focusProperties { enter = { tabRequesters[activeIndex] } }
             .tvGlass(backdrop = backdrop, preset = TvGlassPresets.chrome, shape = pill)
             .height(TvDimens.tabBarHeight)
-            .padding(horizontal = TvDimens.space16)
-            .focusGroup(),
+            .padding(horizontal = TvDimens.space16),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(TvDimens.tabBarItemGap),
     ) {
@@ -95,6 +99,7 @@ fun TvTopTabBar(
             Column(
                 modifier = Modifier
                     .focusRequester(tabRequesters[index])
+                    .focusProperties { down = contentFocusRequester }
                     .tvFocusScale(interactionSource)
                     .clip(pill)
                     .background(

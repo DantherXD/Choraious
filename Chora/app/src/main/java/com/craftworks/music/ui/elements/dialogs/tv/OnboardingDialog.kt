@@ -3,8 +3,6 @@ package com.craftworks.music.ui.elements.dialogs.tv
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.EaseInOutCubic
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -38,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.craftworks.music.ui.theme.tv.LocalReduceMotion
+import com.craftworks.music.ui.theme.tv.LocalTvMotion
 import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.managers.MediaProviderManager
@@ -66,6 +66,8 @@ fun OnboardingDialog(
     setShowDialog: (Boolean) -> Unit = { }
 ) {
     val colors = LocalTvColors.current
+    val motion = LocalTvMotion.current
+    val reduceMotion = LocalReduceMotion.current
     var step by remember { mutableStateOf(OnboardingStep.OVERVIEW) }
     var showAddProviderDialog by remember { mutableStateOf(false) }
 
@@ -88,13 +90,18 @@ fun OnboardingDialog(
                 targetState = step,
                 transitionSpec = {
                     val forward = targetState.ordinal > initialState.ordinal
-                    slideInHorizontally(
-                        animationSpec = tween(350, easing = EaseInOutCubic),
-                        initialOffsetX = { if (forward) it / 4 else -it / 4 },
-                    ) + fadeIn(tween(350)) togetherWith slideOutHorizontally(
-                        animationSpec = tween(350, easing = EaseInOutCubic),
-                        targetOffsetX = { if (forward) -it / 4 else it / 4 },
-                    ) + fadeOut(tween(350))
+                    if (reduceMotion) {
+                        fadeIn(animationSpec = motion.reducedFade) togetherWith
+                            fadeOut(animationSpec = motion.reducedFade)
+                    } else {
+                        slideInHorizontally(
+                            animationSpec = motion.stepSlide,
+                            initialOffsetX = { if (forward) it / 4 else -it / 4 },
+                        ) + fadeIn(motion.stepChange) togetherWith slideOutHorizontally(
+                            animationSpec = motion.stepSlide,
+                            targetOffsetX = { if (forward) -it / 4 else it / 4 },
+                        ) + fadeOut(motion.stepChange)
+                    }
                 },
                 label = "onboardingStep",
             ) { currentStep ->
@@ -111,6 +118,7 @@ fun OnboardingDialog(
                         OnboardingStep.PROVIDER_SELECTION -> OnboardingSetupProviders(
                             onNext = { step = OnboardingStep.DONE },
                             showAddProviderDialog = { showAddProviderDialog = true },
+                            onSkip = { setShowDialog(false) },
                         )
 
                         OnboardingStep.DONE -> OnboardingDoneScreen {
@@ -176,6 +184,7 @@ private fun OnboardingOverviewStep(onNext: () -> Unit) {
 private fun OnboardingSetupProviders(
     onNext: () -> Unit,
     showAddProviderDialog: () -> Unit,
+    onSkip: () -> Unit,
 ) {
     val colors = LocalTvColors.current
     val type = LocalTvTypography.current
@@ -209,6 +218,14 @@ private fun OnboardingSetupProviders(
         text = stringResource(R.string.action_next),
         style = TvButtonStyle.Primary,
         onClick = onNext,
+    )
+
+    // "Set up later": the TV UI (library, settings, dialogs) stays reachable on a clean install,
+    // which also makes the setup flow testable without a Navidrome server. The provider screen is
+    // one Back/tab away, so skipping is cheap.
+    TvGlassButton(
+        text = stringResource(R.string.onboarding_setup_later),
+        onClick = onSkip,
     )
 }
 

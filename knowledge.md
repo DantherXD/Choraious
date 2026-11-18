@@ -95,3 +95,17 @@ Version bumps: edit `versionCode` / `versionName` manually in `app/build.gradle.
 - Large Text is a whole-ramp factor in `TvTheme` (`TvTypeScale.scaled`, capped against the system font scale) plus `LocalTvLargeText` for grids.
 - Release APKs are signed from `CHORA_KEYSTORE_FILE`/`CHORA_KEY_ALIAS`/`CHORA_KEYSTORE_PASSWORD`/`CHORA_KEY_PASSWORD` when set, otherwise with the debug key. CI builds `assembleFossRelease` and attaches the raw APK to a GitHub Release (workflow_dispatch `publish: true` or a `v*` tag) — Actions artifacts are always zipped.
 - `assembleFossRelease` (R8) takes over 5 minutes cold: run it detached with `nohup … > /tmp/build.log 2>&1 &` and poll the log; the sync shell limit is five minutes.
+
+## Phase 5 (focus traversal, motion tokens)
+
+- The tab bar is **not** a `focusGroup` — as a group it traps the exit and DOWN never reaches the
+  screen. `TvAppScaffold` puts a `FocusRequester` on the content slot's focus group and passes it
+  to `TvTopTabBar`, where every tab declares `focusProperties { down = contentFocusRequester }`.
+  New shell-level navigation should be wired the same way rather than left to 2D search.
+- Motion specs live in `TvMotion`: `stepChange`/`stepSlide` (onboarding steps), `panelSlide`
+  (IntOffset flavour of `panelIn`), `reducedFade` (the only fade allowed under reduce motion).
+  Do not hardcode `tween(...)` in TV code; slide specs need the `IntOffset` tokens.
+- Testing TV UI on this host is effectively impossible: no KVM (uid not in the `kvm` group), so the
+  AVD runs under TCG — 200 s boot, 3 min `pm install`, the app ANR-killed or silently killed before
+  its first frame, and `uiautomator dump` timing out on `UiAutomation`. Use screenshots only, and do
+  not claim a D-pad path was verified unless a screenshot shows the focus ring on the target.

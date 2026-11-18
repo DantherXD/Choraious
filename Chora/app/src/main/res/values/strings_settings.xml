@@ -95,4 +95,5 @@
     <string name="settings_large_text">Large Text</string>
     <string name="settings_large_text_hint">Enlarge text and row heights</string>
     <string name="settings_lyrics_speed_value">%1$d ms</string>
+    <string name="onboarding_setup_later">Set up later</string>
 </resources>

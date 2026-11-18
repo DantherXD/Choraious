@@ -1,5 +1,6 @@
 package com.craftworks.music.ui.theme.tv
 
+import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.snap
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.IntOffset
 
 /**
  * Motion tokens (spec §4.7).
@@ -36,6 +38,28 @@ data class TvMotion(
     val dialogIn: FiniteAnimationSpec<Float> = tween(durationMillis = 300),
     val dialogOut: FiniteAnimationSpec<Float> = tween(durationMillis = 200),
     val controlsFade: FiniteAnimationSpec<Float> = tween(durationMillis = 250),
+
+    /**
+     * Onboarding step change: 350 ms with a cubic in-out, slightly softer than [push] because
+     * nothing is being pushed on a navigation stack.
+     */
+    val stepChange: FiniteAnimationSpec<Float> =
+        tween(durationMillis = 350, easing = EaseInOutCubic),
+
+    /** [stepChange] for the horizontal slide of the same transition. */
+    val stepSlide: FiniteAnimationSpec<IntOffset> =
+        tween(durationMillis = 350, easing = EaseInOutCubic),
+
+    /**
+     * The only fade allowed under reduced motion: at [ReducedMotionMaxFadeMillis] it is the
+     * longest duration that still counts as an instant change rather than an animation.
+     */
+    val reducedFade: FiniteAnimationSpec<Float> =
+        tween(durationMillis = ReducedMotionMaxFadeMillis),
+
+    /** [panelIn] as an offset spec, for the slide of a panel or the transport bar. */
+    val panelSlide: FiniteAnimationSpec<IntOffset> =
+        spring(dampingRatio = 0.85f, stiffness = 380f),
 )
 
 val LocalTvMotion = staticCompositionLocalOf { TvMotion() }

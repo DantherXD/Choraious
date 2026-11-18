@@ -12,9 +12,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import com.craftworks.music.ui.theme.tv.LocalTvColors
@@ -37,6 +39,12 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
  * Back (spec §5.4 rule 4): on a tab root, Back moves focus into the bar instead of leaving the
  * app. Once the bar itself has focus the handler is disabled, so Back falls through to the
  * system and exits — rules 3 and 5 come from the nav host and the system respectively.
+ *
+ * Down from the tab bar (spec §5.4): the content slot is a focus group with a [FocusRequester],
+ * and the bar is handed that requester so DOWN is wired explicitly instead of being left to
+ * two-dimensional search. Search has to solve "the nearest focusable below a 76dp pill that
+ * floats over a full-screen list", and when it guesses wrong the D-pad looks broken rather than
+ * slow. Entering the group focuses the first focusable child of the screen.
  */
 @Composable
 fun TvAppScaffold(
@@ -55,6 +63,7 @@ fun TvAppScaffold(
     }
 
     val tabBarRequester = remember { FocusRequester() }
+    val contentRequester = remember { FocusRequester() }
     var tabBarFocused by remember { mutableStateOf(false) }
 
     BackHandler(enabled = isTabRoot && !tabBarFocused) {
@@ -78,6 +87,8 @@ fun TvAppScaffold(
                 modifier = Modifier
                     .fillMaxSize()
                     .layerBackdrop(backdrop)
+                    .focusRequester(contentRequester)
+                    .focusGroup()
             ) {
                 content()
             }
@@ -103,6 +114,7 @@ fun TvAppScaffold(
                     currentTab = currentTab,
                     onTabSelected = onTabSelected,
                     focusRequester = tabBarRequester,
+                    contentFocusRequester = contentRequester,
                     modifier = Modifier.onFocusChanged { tabBarFocused = it.hasFocus },
                 )
             }

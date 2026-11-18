@@ -332,13 +332,16 @@ fun TvNowPlaying(
                         AnimatedContent(
                             targetState = metadata?.artworkUri,
                             transitionSpec = {
-                                val fadeMillis = if (reduceMotion) 120 else 450
-                                val fade = tween<Float>(durationMillis = fadeMillis)
+                                val fade = if (reduceMotion) {
+                                    motion.reducedFade
+                                } else {
+                                    motion.artworkCrossfade
+                                }
                                 (fadeIn(animationSpec = fade) + scaleIn(
                                     initialScale = if (reduceMotion) 1f else 0.97f,
                                     animationSpec = fade,
                                 )) togetherWith fadeOut(
-                                    animationSpec = tween(if (reduceMotion) 120 else 200)
+                                    animationSpec = if (reduceMotion) motion.reducedFade else motion.panelTint
                                 )
                             },
                             label = "npArtwork",
@@ -427,17 +430,17 @@ fun TvNowPlaying(
             AnimatedVisibility(
                 visible = controlsVisible,
                 enter = fadeIn(
-                    animationSpec = if (reduceMotion) tween(120) else motion.controlsFade
+                    animationSpec = if (reduceMotion) motion.reducedFade else motion.controlsFade
                 ) + if (reduceMotion) {
                     EnterTransition.None
                 } else {
                     slideInVertically(
-                        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
+                        animationSpec = motion.panelSlide,
                         initialOffsetY = { it / 2 },
                     )
                 },
                 exit = fadeOut(
-                    animationSpec = if (reduceMotion) tween(120) else motion.controlsFade
+                    animationSpec = if (reduceMotion) motion.reducedFade else motion.controlsFade
                 ),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -486,17 +489,17 @@ fun TvNowPlaying(
             EnterTransition.None
         } else {
             slideInHorizontally(
-                animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
+                animationSpec = motion.panelSlide,
                 initialOffsetX = { it },
-            ) + fadeIn(animationSpec = tween(durationMillis = 200))
+            ) + fadeIn(animationSpec = motion.panelTint)
         }
         val panelExit = if (reduceMotion) {
             ExitTransition.None
         } else {
             slideOutHorizontally(
-                animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
+                animationSpec = motion.panelSlide,
                 targetOffsetX = { it },
-            ) + fadeOut(animationSpec = tween(durationMillis = 200))
+            ) + fadeOut(animationSpec = motion.panelTint)
         }
         // Fill height only: the container must wrap the panel's width, otherwise the child would
         // start at the container's left edge instead of docking to the right.

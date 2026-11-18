@@ -1265,3 +1265,51 @@ variant, gfxinfo for a track change and a panel animation.
 - `CHORA_KEYSTORE_BASE64` — base64 of the single release keystore.
 - `CHORA_KEYSTORE_PASSWORD`, `CHORA_KEY_ALIAS`, `CHORA_KEY_PASSWORD` — matching credentials.
 - Without them the workflow still passes and publishes a debug-key-signed APK with a notice.
+
+
+## Appendix I — Phase 5 log (focus traversal, motion tokens, cleanup gates)
+
+### The bug that started this phase
+
+On the emulator, DOWN never left the focused tab bar into screen content: the tab stayed the only
+focusable node with focus, on Library, Radios and Listen Now alike. Two causes, both now fixed in
+code:
+
+| Cause | Fix |
+| --- | --- |
+| The tab bar `Row` carried `focusGroup()`, which makes the bar a single focus area and swallowed the exit before 2D search could look outside it. | Removed. |
+| Traversal was left entirely to two-dimensional search, which has to solve "nearest focusable below a floating 76dp pill that overlaps a full-screen lazy list". | Wired explicitly: `TvAppScaffold` attaches a `FocusRequester` to the content slot's focus group and hands it to `TvTopTabBar`, and every tab sets `focusProperties { down = contentFocusRequester }`. DOWN now enters the group, i.e. the first focusable child of the screen, whatever the screen's layout is. |
+
+### Phase 5 task status
+
+| Task | Status |
+| --- | --- |
+| P5-1 motion tuning | Done in code. `TvNowPlaying` no longer hardcodes specs: artwork crossfade, panel slide, panel tint, transport fade and the reduced-motion fades come from `TvMotion`. New tokens `stepChange` / `stepSlide` (onboarding step transitions, 350 ms cubic in-out), `panelSlide` (IntOffset flavour of `panelIn`) and `reducedFade` (the 120 ms fade that is still allowed under reduce motion). The TV onboarding transition also consults `LocalReduceMotion` now, which it did not before. |
+| P5-4 a11y / focus order | Focus order fixed by the traversal change above. TalkBack pass and 1.3× Large Text still need a device. |
+| P5-5 fallback pass | Code path unchanged and compiling (`GlassTier.Solid` / `BlurOnly` in `TvGlass.kt`); forcing a tier needs a device or a temporary debug override, which P5-6 removed. |
+| P5-6 cleanup | `rg` over `ui/tv`, `ui/screens/tv`, `ui/elements/tv`, `ui/theme/tv`: no `TvSideNavigation`, no probe/debug tier override, no `SDK_INT` outside `TvGlass.kt`, no raw `fontSize` (the two hits derive from `TvTypography`), unused `focusGroup` import dropped. |
+| P5-2 glass tuning, P5-3 perf numbers, P5-7 final QA | **Owed.** All three need a real device. `gfxinfo` on a software-rendered emulator measures the emulator, not the app. |
+
+### Verification actually performed
+
+- `:app:compileFossDebugKotlin` green after each edit group; `:app:assembleFossDebug` green
+  (APK 20,521,480 B). Phone sources untouched — the six changed files are `ui/tv/TvAppScaffold.kt`,
+  `ui/tv/TvTopTabBar.kt`, `ui/theme/tv/TvMotion.kt`, `ui/playing/tv/TvNowPlaying.kt`,
+  `ui/elements/dialogs/tv/OnboardingDialog.kt` and the new `onboarding_setup_later` string.
+- Earlier in P4 the build was installed and driven on an API 36 TV AVD: onboarding overview →
+  provider step → "Set up later" → home, tab-to-tab LEFT/RIGHT, Library 2×2 tiles, Browse and
+  Radios rendering. That is what stands behind "the onboarding is testable without a Navidrome
+  server": the skip is an ordinary button, not a debug-only branch (`BuildConfig.DEBUG` is
+  hard-wired `false` in the generated `fossDebug` config, so a debug gate would have compiled out).
+- **The DOWN fix itself is compile-verified only.** This host has no KVM (uid not in the `kvm`
+  group, `/dev/kvm` is `root:kvm 660`), so the AVD runs under TCG: boot 200 s, `pm install` 3 min,
+  the app ANR-killed or silently killed before its first frame on most launches, `uiautomator dump`
+  timing out on `UiAutomation`, and two runner restarts mid-run. Re-check on real hardware with:
+
+```bash
+adb install -r app-foss-debug.apk
+adb shell am start -n com.craftworks.music/.MainActivity
+adb shell input keyevent KEYCODE_DPAD_RIGHT   # walk to Library, CENTER to select
+adb shell input keyevent KEYCODE_BACK         # a tab root sends focus into the bar
+adb shell input keyevent KEYCODE_DPAD_DOWN    # expect the first content item to light up
+```
