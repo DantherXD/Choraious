@@ -56,6 +56,21 @@ fun NowPlayingContent(
     viewModel: NowPlayingViewModel = viewModel(),
     onHide: () -> Unit = {}
 ) {
+    // C2: branch before any phone work. Palette extraction, the phone background and the phone
+    // sheets are all wasted on a TV, and the phone background would paint under the full-bleed
+    // layout. Keep this above every state read so nothing phone-specific is collected on TV.
+    if (LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+        Configuration.UI_MODE_TYPE_TELEVISION
+    ) {
+        TvNowPlaying(
+            mediaController = mediaController,
+            metadata = metadata,
+            navController = navHostController,
+            onRefreshLyrics = { viewModel.refreshLyrics(metadata) },
+        )
+        return
+    }
+
     val backgroundStyle by viewModel.backgroundStyle.collectAsStateWithLifecycle(NowPlayingBackground.STATIC_BLUR)
     val backgroundDarkMode by viewModel.isBackgroundDark.collectAsStateWithLifecycle()
     val oledProtectionMode by viewModel.oledProtectionMode.collectAsStateWithLifecycle(OLEDProtectionMode.OFF)
@@ -87,13 +102,7 @@ fun NowPlayingContent(
 
     NowPlaying_Background(colors, backgroundStyle, targetOverlayColor)
 
-    if (LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION) {
-        TvNowPlaying(
-            mediaController,
-            iconTextColor,
-            metadata
-        )
-    } else if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
         NowPlayingLandscape(
             mediaController = mediaController,
             metadata = metadata,

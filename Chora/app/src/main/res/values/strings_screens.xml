@@ -37,4 +37,25 @@
 
     // TV Search
     <string name="tv_search_placeholder">Artists, Songs, Albums</string>
+
+    <!-- TV Now Playing (spec 6.7) -->
+    <string name="np_lyrics">Lyrics</string>
+    <string name="np_up_next">Up Next</string>
+    <string name="np_lyrics_unavailable">Lyrics not available for this track</string>
+    <string name="np_lyrics_refresh">Refresh Lyrics</string>
+    <string name="np_queue_empty">Nothing up next</string>
+    <string name="np_add_from_library">Add from Library</string>
+    <string name="np_clear">Clear</string>
+    <string name="np_clear_queue_title">Clear Queue</string>
+    <string name="np_clear_queue_confirm">Remove everything after the current track?</string>
+    <string name="np_move_up">Move Up</string>
+    <string name="np_move_down">Move Down</string>
+    <string name="np_go_to_artist">Go to Artist</string>
+    <string name="np_more_actions">More actions</string>
+    <string name="np_previous">Previous</string>
+    <string name="np_play">Play</string>
+    <string name="np_pause">Pause</string>
+    <string name="np_next">Next</string>
+    <string name="np_shuffle">Shuffle</string>
+    <string name="np_repeat">Repeat</string>
 </resources>

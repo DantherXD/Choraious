@@ -33,6 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.craftworks.music.R
+import com.craftworks.music.ui.theme.tv.LocalGlassTier
 import com.craftworks.music.ui.tv.LocalTvTopInset
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
@@ -232,7 +233,9 @@ fun TvS_AppearanceScreen() {
                             AppearanceSettingsManager(context).setNowPlayingLyricsBlur(it)
                         }
                     },
-                    enabled = Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU
+                    // Capability comes from the glass tier, not a scattered platform-version
+                    // read (plan cross-cutting rule 2); blur needs RenderEffect (API 31+).
+                    enabled = LocalGlassTier.current.supportsBlur
                 )
                 val lyricsAutoScroll by AppearanceSettingsManager(context).lyricsAutoScroll.collectAsStateWithLifecycle(true)
                 SettingsSwitchItem(
@@ -287,24 +290,6 @@ fun TvS_AppearanceScreen() {
                         }
                     }
                 )
-
-                // Refresh Ripple
-                /*
-                val refreshRipple by AppearanceSettingsManager(context).refreshAnimationFlow.collectAsState(
-                    true
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.Setting_RefreshAnimation),
-                    icon = ImageVector.vectorResource(R.drawable.placeholder),
-                    checked = refreshRipple,
-                    onCheckedChange = {
-                        coroutineScope.launch {
-                            AppearanceSettingsManager(context).setUseRefreshAnimation(it)
-                        }
-                    },
-                    enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                )
-                */
 
                 // Track numbers in album view
                 val showTrackNumbers by AppearanceSettingsManager(context).showTrackNumbersFlow.collectAsState(

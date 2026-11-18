@@ -91,6 +91,36 @@ object TvDimens {
     val menuWidth = 400.dp
     val menuMaxHeight = 400.dp
 
+    // ---- Now Playing (spec §6.7) ------------------------------------------------------------
+    // Halved spec points, like the rest of this file: 560dp artwork -> 280dp, 720dp transport
+    // bar -> 360dp, 40/44% panels capped at 720/800 spec points -> 360/400dp.
+    val npArtworkSize = 280.dp
+    val npInfoWidth = 360.dp
+    val npTransportWidth = 360.dp
+    val npTransportHeight = 48.dp
+    val npPlayButtonSize = 36.dp
+    val npActionEdge = 24.dp
+    val npPanelGap = 12.dp
+    val npPanelCorner = 24.dp
+    val npPanelScrollPadding = 120.dp
+    val npPanelWidthFraction = 0.40f
+    val npQueuePanelWidthFraction = 0.44f
+    val npPanelMaxWidth = 360.dp
+    val npQueuePanelMaxWidth = 400.dp
+    val npLyricsLeadBarWidth = 3.dp
+    val npQueueRowHeight = 40.dp
+    val npQueueArtworkSize = 22.dp
+    val npQueueActionSize = 32.dp
+    val npArtworkShadow = 12.dp
+    /** Touch/focus height of the 2dp progress bar: the bar itself is too thin to focus. */
+    val npProgressTouchHeight = 24.dp
+    val npProgressHeight = 2.dp
+    /** Background wash drift, half of the spec's ±12 points over a 20 s cycle. */
+    val npBackgroundDrift = 6.dp
+    /** Panel-open displacement of the artwork/title block (spec §6.7). */
+    val npDisplaceFraction = 0.18f
+    val npDisplaceScale = 0.94f
+
     /** Focus language (spec §4.6). The ring stays 3dp: it is a legibility cue, not a scale cue. */
     val focusRingWidth = 3.dp
     val focusGlowWidth = 6.dp

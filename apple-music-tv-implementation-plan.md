@@ -1,6 +1,7 @@
 # Chora TV — Apple Music Reskin: Implementation Plan
 
-Status: **Proposed — awaiting review and approval. No implementation has started.**
+Status: **In progress.** P0–P2 complete with execution logs (Appendices A–F);
+P3 (Now Playing, lyrics, queue) implemented and compiled locally (Appendix G).
 Date: 2026-11-15
 Input: `apple-music-tv-spec.md` (read in full)
 Repo: `Chora/` @ `9b5799b` (shallow clone), single `:app` module
@@ -1125,3 +1126,110 @@ Left alone, with reasons:
 | Commit | Content |
 |---|---|
 | `d9cfe93` | type-scale halve, bar rework with icons, coupled size fixes, grid tile fill |
+
+---
+
+## Appendix G — P3 (Now Playing, lyrics, queue) execution log
+
+Status: **implemented; compiled and packaged locally (`:app:assembleFossDebug`), not device-tested.**
+This is the first phase in this project that was compiled inside the agent environment: a userland
+JDK 21.0.13 + Android SDK platform 37.0 + build-tools 37.0.0 were installed under `$HOME/tc`, and
+`local.properties` points at them (gitignored). No Gradle cache, SDK or toolchain is committed.
+
+### G1 Files
+
+New — `ui/elements/tv/apple/`:
+
+| File | Content |
+|---|---|
+| `TvProgressBar.kt` | 2dp track/red fill, elapsed + remaining captions, ±10 s D-pad seek while focused |
+| `TvLyricsPanel.kt` | right-hand `panel` glass, synced/word-synced/plain lyrics, empty state |
+| `TvQueuePanel.kt` | Up Next list, context menu, reorder, remove, clear-after-current, debounced provider sync |
+
+Rewritten — `ui/playing/tv/TvNowPlaying.kt` (full-bleed background, artwork/title block, displaced
+panels, glass transport, focus/auto-hide rules). Modified — `ui/playing/NowPlaying.kt` (early TV
+branch, C2), `ui/theme/tv/TvShapes.kt` (`TvDimens` now-playing tokens),
+`res/values/strings_screens.xml` (19 `np_*` strings), `res/values/strings_actions.xml`
+(`action_cancel`).
+
+### G2 Decisions and deviations
+
+1. **C2 landed as a true early branch.** `NowPlayingContent` returns into `TvNowPlaying` before any
+   palette/DataStore collection, so the phone background no longer paints under the TV layout and no
+   phone state is observed on TV. The phone branch below is unchanged.
+2. **The lyrics panel does not reuse `LyricsView`.** That composable is phone Material3, reads the
+   phone alignment/blur/bounce settings and is built around pull-to-refresh. `LyricsState` /
+   `LyricsRepository` are reused unchanged; only rendering is new. Word sync colours words as the
+   position passes them; plain lyrics are one scrollable block.
+3. **No ±3-line blur/fade falloff in the panel.** The spec ties falloff to the lyrics-mode setting
+   that P4 removes on TV (blur fixed to preset). Adding a blur distance now would be dead behaviour
+   one phase later, so the panel uses opacity/weight only.
+4. **Auto-hide cannot take focus away.** The 5 s timer hides controls only when no transport control
+   holds focus; when it hides, focus moves to a focusable screen root, whose first key press reveals
+   the controls and re-focuses play/pause. Reduce motion keeps the controls permanently visible, as
+   the spec requires.
+5. **Panel layout is wrap-width, fill-height.** The first draft put the panels in a full-screen
+   container, which aligned them to the *left*; the container now wraps the panel width and is
+   aligned `CenterEnd`.
+6. **Provider queue sync is effectively a no-op today, by provider state, not by UI.** `savePlayQueue`
+   is `TODO()` in `SubsonicMediaProvider` (inherited by Navidrome) and in `LocalMediaProvider`; the
+   debounced 1 s write is wrapped in `runCatching` and logs only the exception class, so playback is
+   never blocked. There is no capability flag on `MediaProvider` to test, so success is treated as
+   best-effort exactly as the plan allows.
+7. **"Go to Artist" appears only when the item carries an `artistId` extra**; "Go to Album" uses the
+   `albumId` extra that song items already carry. Both navigate with
+   `popUpTo<Screen.NowPlayingLandscape> { inclusive = true }`, so the detail screen does not stack on
+   top of Now Playing.
+8. **OLED protection mapping:** `LYRICS_ONLY` opens the lyrics panel and dims the wash (0.88), `MINIMAL`
+   drops the wash to pure black, and the red progress fill is drawn at 80% in both. This preserves
+   the two behaviours the old TV screen had, restated in the new layout.
+9. **Gate fix outside P3 (one line):** `TvSettingsAppearance` read `Build.VERSION.SDK_INT` to enable
+   the lyrics-blur switch. It now reads `LocalGlassTier.current.supportsBlur` (cross-cutting rule 2),
+   and the commented-out refresh-ripple row that also matched the gate was deleted. The
+   `SDK_INT|VERSION_CODES` grep is otherwise clean outside `TvGlass.kt`.
+10. **Tokens, not literals:** artwork 280dp, info column 360dp, transport bar 360×48dp, play disc
+    36dp, panels 40%/44% capped at 360/400dp, queue row 40dp with 22dp artwork, progress 2dp inside
+    a 24dp focus target, wash drift ±6dp over 20 s, displacement 18%/0.94 — all in `TvDimens`.
+
+### G3 Verification actually performed
+
+```
+cd Chora
+JAVA_HOME=~/tc/jdk-21.0.13+9 ./gradlew :app:assembleFossDebug   # BUILD SUCCESSFUL, 2m 04s
+# apk: app/build/outputs/apk/foss/debug/app-foss-debug.apk (20 MB)
+```
+
+- `:app:compileFossDebugKotlin` passes; `assembleFossDebug` produces the APK (resources, R class,
+  string merge and dexing all exercised).
+- Static: `TvNowPlaying(` has exactly two references (its declaration and the TV branch); the
+  `SDK_INT|VERSION_CODES` grep is clean outside `TvGlass.kt`; new files contain no raw `fontSize`
+  and no `R.font` references.
+- **Not** built: `assembleSfproDebug` (licensed SF Pro files are not in this workspace, by design).
+- **Not** done: any device/emulator run, screenshot, D-pad traversal, audio playback, gfxinfo capture,
+  or queue-sync round trip. Those remain Gate 3 evidence for the requester.
+
+### G4 Gate 3 checklist for the requester
+
+```bash
+./gradlew :app:installFossDebug     # or :app:installSfproDebug on a machine holding the OTFs
+adb shell am start -n com.craftworks.music/.MainActivity
+```
+
+Now Playing: black base with a blurred wash, 280dp artwork, title/artist/album line, glass transport
+with a 2dp red progress bar (left/right on the focused bar seeks ±10 s), controls fading after 5 s
+and returning on any D-pad press; with reduce motion on, controls never fade and the wash does not
+drift.
+
+Lyrics: "Lyrics" opens a docked glass panel, artwork shifts left and scales down, the active line has
+a red leading bar and auto-centres, word-synced tracks colour words as they play, unknown tracks show
+"Lyrics not available for this track" with a refresh action; D-pad Left and Back both return focus to
+the Lyrics pill.
+
+Queue: "Up Next" lists the real controller queue with the current row tinted and equalized;
+long-press or `⋯` gives Play Next / Move Up / Move Down / Remove / Go to Album(/Artist); Clear asks
+for confirmation and removes everything after the current track; an empty queue offers "Add from
+Library" and lands on the Library tab. Reordering with a Subsonic/Navidrome provider logs
+`TV-QUEUE: Queue sync skipped (NotImplementedError)` — expected today.
+
+Screenshots/perf still owed at this gate: now playing, + lyrics, + queue, OLED variant, reduce-motion
+variant, gfxinfo for a track change and a panel animation.
