@@ -1,0 +1,85 @@
+# Project knowledge — Chora
+
+Chora is a lightweight Android music player (Kotlin + Jetpack Compose) that streams from
+Subsonic / OpenSubsonic / Navidrome servers, local device storage, and internet radio.
+Published on Google Play and F-Droid. Upstream: https://github.com/CraftWorksMC/Chora
+
+The repository is cloned in `Chora/` (this workspace root is only a wrapper; all paths below
+are relative to `Chora/`). Single Gradle module: `:app`, namespace and applicationId
+`com.craftworks.music`.
+
+The README states this is the author's first Kotlin project and the code is not well
+organized — expect duplication, hardcoded values and dead scaffolding. Match what is there
+rather than restructuring files you touch.
+
+## Commands
+
+Run from `Chora/`. Requires JDK 21 and an Android SDK with platform 37 (create
+`local.properties` with `sdk.dir=...`; it is gitignored). Gradle comes from the wrapper
+(9.6.0), AGP 9.4.1.
+
+- Build debug APK: `./gradlew assembleFossDebug` (this is exactly what CI runs; there is no
+  plain `assembleDebug` any more because of the `fonts` flavor dimension. `assembleSfproDebug`
+  needs licensed SF Pro files that are gitignored and only exist on the owner's machine)
+- Compile only: `./gradlew compileDebugKotlin`
+- Install on device: `./gradlew installDebug`
+- Lint: `./gradlew lintDebug`
+- Tests: no `src/test` or `src/androidTest` sources exist yet. JUnit/Espresso deps are
+  declared but there is nothing to run; do not claim test coverage.
+
+CI: `.github/workflows/build.yml` builds `assembleFossDebug` on push/PR with JDK 21 and uploads
+`app/build/outputs/apk/foss/debug/app-foss-debug.apk`.
+
+Version bumps: edit `versionCode` / `versionName` manually in `app/build.gradle.kts`
+(currently 311 / 1.31.1).
+
+## Architecture
+
+- `data/providers/media/` — `MediaProvider`, a `@Serializable` abstract class implemented by
+  `subsonic/SubsonicMediaProvider`, `navidrome/NavidromeMediaProvider`, `local/LocalMediaProvider`.
+  Every provider method returns provider-agnostic model types from `data/model/`.
+  Adding a provider subclass also requires registering it in `MediaProvider.serializerModule`.
+- `managers/MediaProviderManager.kt` — process-wide `object` singleton holding the provider
+  map and `currentProvider: StateFlow<MediaProvider?>`. Persists providers to an encrypted
+  DataStore file `providers.pb` (`utils/EncryptedMediaProviderSerializer` + `utils/CryptoData`,
+  Android Keystore AES). Initialized from `ChoraApplication.onCreate()`.
+- `managers/` — `DataRefreshManager`, `MigrationManager`, `TranscodeManager`; settings live in
+  `managers/settings/*SettingsManager` (Appearance, LocalData, MediaProvider, Misc, Playback),
+  all DataStore-backed.
+- `data/repository/` — `Song/Album/Artist/Playlist/Radio/Starred/LyricsRepository`
+  (`@Singleton`, constructor-injected). They delegate to `MediaProviderManager.currentProvider`
+  and map results to `androidx.media3.common.MediaItem`, often through `*.toMediaItem()` helpers.
+- `player/MusicService.kt` — `MediaLibraryService` + ExoPlayer + MediaSession; serves Android
+  Auto / media browsing, resolves stream URLs through `ResolvingDataSource` and
+  `OkHttpDataSource` (for transcode + headers). Largest/most delicate file (~920 lines).
+- `ui/` — Compose UI. `NavGraph.kt` + `data/model/Screen.kt` use type-safe Navigation
+  (`composable<Screen.Home>`); add a route in that sealed interface. Screens in `ui/screens/`,
+  TV variants in `ui/screens/tv/`, full-screen player in `ui/playing/` (incl. `playing/tv`),
+  shared widgets/dialogs in `ui/elements/`, theme in `ui/theme/`.
+- DI: Hilt. `@HiltAndroidApp` on `ChoraApplication`, `@AndroidEntryPoint` on `MainActivity` and
+  `MusicService`, `@HiltViewModel` for view models, `data/di/DataSourceModule` provides the
+  lyrics data sources.
+- Lyrics: `data/providers/lyrics/{lrclib,lrcred,netease,unison}` with parsing in
+  `utils/TtmlParser.kt`, `utils/LyricsUtils.kt`. Supports word/line synced and unsynced lyrics.
+
+## Conventions and gotchas
+
+- Phone, Android Auto, Android TV and F-Droid are all first-class. UI changes generally need a
+  matching path under `ui/screens/tv/` (and TV dialogs under `ui/elements/dialogs/tv/`);
+  the TV/phone split is chosen via `LocalConfiguration` (`UI_MODE_TYPE_TELEVISION`).
+- All user-facing text goes through `stringResource(...)`; the strings are split across
+  `res/values/strings.xml`, `strings_actions.xml`, `strings_dialogs.xml`, `strings_screens.xml`,
+  `strings_settings.xml`. Add new strings to the matching file. Translations are managed on
+  Crowdin and live in `res/values-<locale>/`; `generateLocaleConfig = true` builds the locale
+  config automatically, so do not hand-write it.
+- Release builds are minified + resource-shrunk (ProGuard) but signed with the *debug* signing
+  config, so `assembleRelease` works locally without a keystore. `debug` is explicitly
+  `isDebuggable = false` / `isProfileable = true` — attach the profiler rather than a debugger.
+- `network_security_config.xml` allows cleartext HTTP and user-installed CA certs so LAN
+  Subsonic/Navidrome servers on plain HTTP work. Do not tighten this without an explicit ask.
+- Provider credentials are stored encrypted (Android Keystore); never log credentials, URLs with
+  tokens, or provider data.
+- Toolchain is ahead of stable: compileSdk/targetSdk 37, minSdk 24, Kotlin 2.4.21, Compose BOM
+  2026.09.00, KSP for Hilt, Ktor/Ktorfit, Coil 3, kotlinx.serialization, Media3 1.11.x.
+  Use versions from `gradle/libs.versions.toml`; do not add libraries ad hoc.
+- Release signing, `versionCode` bumps and pushes are release work — only do them when asked.

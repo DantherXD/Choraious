@@ -1,0 +1,429 @@
+package com.craftworks.music.managers.settings
+
+import android.content.Context
+import android.os.Build
+import android.provider.Settings
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.craftworks.music.R
+import com.craftworks.music.data.BottomNavItem
+import com.craftworks.music.data.model.Screen
+import com.craftworks.music.dataStore
+import com.craftworks.music.ui.elements.ActionButton
+import com.craftworks.music.ui.elements.ActionButtonType
+import com.craftworks.music.ui.playing.NowPlayingAlignment
+import com.craftworks.music.ui.playing.NowPlayingBackground
+import com.craftworks.music.ui.screens.HomeItem
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
+
+enum class OLEDProtectionMode {
+    OFF, LYRICS_ONLY, MINIMAL,
+}
+enum class AppTheme {
+    LIGHT, DARK, SYSTEM
+}
+
+@Singleton
+class AppearanceSettingsManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    companion object {
+        private val USERNAME_KEY = stringPreferencesKey("username")
+        private val NP_BACKGROUND_KEY = stringPreferencesKey("np_background_type")
+        private val NP_TITLE_ALIGNMENT = stringPreferencesKey("np_title_alignment")
+        private val NP_LYRICS_ALIGNMENT = stringPreferencesKey("np_lyrics_alignment")
+        private val SHOW_NAVIDROME_KEY = booleanPreferencesKey("show_navidrome_logo")
+        private val SHOW_MORE_INFO_KEY = booleanPreferencesKey("show_more_info")
+        private val NOW_PLAYING_LYRIC_BLUR_KEY = booleanPreferencesKey("now_playing_lyrics_blur")
+        private val BOTTOM_NAV_ITEMS_KEY = stringPreferencesKey("bottom_nav_order")
+        private val HOME_ITEMS_KEY = stringPreferencesKey("home_items_order")
+        private val APP_THEME = stringPreferencesKey("theme")
+
+        private val LYRICS_ANIMATION_SPEED = intPreferencesKey("lyrics_animation_speed")
+        private val LYRICS_AUTOSCROLL = booleanPreferencesKey("lyrics_auto_scroll")
+        private val LYRICS_RECENTER_AFTER_SCROLL = booleanPreferencesKey("lyrics_recenter_after_Scroll")
+        private val LYRICS_WORD_BOUNCE = booleanPreferencesKey("lyrics_word_bounce")
+        private val USE_REFRESH_ANIMATION = booleanPreferencesKey("use_refresh_animation")
+        private val SHOW_TRACK_NUMBERS = booleanPreferencesKey("show_track_numbers")
+
+        // TV reduce-motion / large-text flags (spec §4.7, plan C4). No settings UI until P4.
+        private val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
+        private val LARGE_TEXT = booleanPreferencesKey("large_text")
+
+        private val OLED_PROTECTION_MODE = stringPreferencesKey("oled_protection")
+        private val DISABLE_SCREEN_STANDBY = booleanPreferencesKey("disable_screen_standby")
+        private val ALBUM_DETAILS_BUTTONS = stringPreferencesKey("album_details_buttons")
+        private val ARTIST_DETAILS_BUTTONS = stringPreferencesKey("artist_details_buttons")
+        private val PLAYLIST_DETAILS_BUTTONS = stringPreferencesKey("playlist_details_buttons")
+    }
+
+    val usernameFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[USERNAME_KEY] ?: "Username"
+    }
+
+    suspend fun setUsername(username: String) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[USERNAME_KEY] = username
+            }
+        }
+    }
+
+    val npBackgroundFlow: Flow<NowPlayingBackground> = context.dataStore.data.map { preferences ->
+        try {
+            NowPlayingBackground.valueOf(
+                preferences[NP_BACKGROUND_KEY]
+                    ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                        NowPlayingBackground.ANIMATED_BLUR.name
+                    else
+                        NowPlayingBackground.STATIC_BLUR.name
+            )
+        } catch (e: Exception) {
+            println(e.message)
+            NowPlayingBackground.STATIC_BLUR
+        }
+    }
+
+    suspend fun setBackgroundType(backgroundType: NowPlayingBackground) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[NP_BACKGROUND_KEY] = backgroundType.name
+            }
+        }
+    }
+
+    val showMoreInfoFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_MORE_INFO_KEY] ?: true
+    }
+
+    suspend fun setShowMoreInfo(showMoreInfo: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[SHOW_MORE_INFO_KEY] = showMoreInfo
+            }
+        }
+    }
+
+    val nowPlayingLyricsBlurFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[NOW_PLAYING_LYRIC_BLUR_KEY]
+            ?: true
+    }
+
+    suspend fun setNowPlayingLyricsBlur(blur: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[NOW_PLAYING_LYRIC_BLUR_KEY] = blur
+            }
+        }
+    }
+
+    val showNavidromeLogoFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_NAVIDROME_KEY] ?: true
+    }
+
+    suspend fun setShowNavidromeLogo(showNavidromeLogo: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[SHOW_NAVIDROME_KEY] = showNavidromeLogo
+            }
+        }
+    }
+
+    val homeItemsItemsFlow: Flow<List<HomeItem>> = context.dataStore.data.map { preferences ->
+        val jsonString = preferences[HOME_ITEMS_KEY]
+        val defaultValue = listOf(
+            HomeItem("recently_played", true),
+            HomeItem("recently_added", true),
+            HomeItem("most_played", true),
+            HomeItem("random_songs", true)
+        )
+        try {
+            jsonString?.let { Json.decodeFromString<List<HomeItem>>(it) } ?: defaultValue
+        } catch (e: Exception) {
+            println(e.message)
+            defaultValue
+        }
+    }
+
+    suspend fun setHomeItems(items: List<HomeItem>) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[HOME_ITEMS_KEY] = Json.encodeToString(items)
+            }
+        }
+    }
+
+    val bottomNavItemsFlow: Flow<List<BottomNavItem>> = context.dataStore.data.map { preferences ->
+        val jsonString = preferences[BOTTOM_NAV_ITEMS_KEY]
+        val defaultValue = listOf(
+            BottomNavItem(context.getString(R.string.nav_home), R.drawable.rounded_home_24, Screen.Home),
+            BottomNavItem(context.getString(R.string.nav_albums), R.drawable.rounded_library_music_24, Screen.Albums),
+            BottomNavItem(context.getString(R.string.nav_songs), R.drawable.round_music_note_24, Screen.Songs),
+            BottomNavItem(context.getString(R.string.nav_artists), R.drawable.rounded_artist_24, Screen.Artists),
+            BottomNavItem(context.getString(R.string.nav_radios), R.drawable.rounded_radio, Screen.Radios),
+            BottomNavItem(context.getString(R.string.nav_playlists), R.drawable.placeholder, Screen.Playlists)
+        )
+        try {
+            jsonString?.let { Json.decodeFromString<List<BottomNavItem>>(it) } ?: defaultValue
+        } catch (e: Exception) {
+            println(e.message)
+            defaultValue
+        }
+    }
+
+    suspend fun setBottomNavItems(items: List<BottomNavItem>) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[BOTTOM_NAV_ITEMS_KEY] = Json.encodeToString(items)
+            }
+        }
+    }
+
+    val appTheme: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[APP_THEME] ?: "SYSTEM"
+    }
+
+    suspend fun setAppTheme(theme: AppTheme) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[APP_THEME] = theme.name
+            }
+        }
+    }
+
+    val lyricsAnimationSpeedFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[LYRICS_ANIMATION_SPEED] ?: 660
+    }
+
+    suspend fun setLyricsAnimationSpeed(speed: Int) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[LYRICS_ANIMATION_SPEED] = speed
+            }
+        }
+    }
+
+    val refreshAnimationFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[USE_REFRESH_ANIMATION]
+            ?: (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+    }
+
+    suspend fun setUseRefreshAnimation(useRefreshAnimation: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[USE_REFRESH_ANIMATION] = useRefreshAnimation
+            }
+        }
+    }
+
+    val showTrackNumbersFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_TRACK_NUMBERS] ?: true
+    }
+
+    suspend fun setShowTrackNumbers(showTrackNumbers: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[SHOW_TRACK_NUMBERS] = showTrackNumbers
+            }
+        }
+    }
+
+    /** In-app reduced-motion toggle, ORed with the system animator scale. */
+    val reduceMotionFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[REDUCE_MOTION] ?: false
+    }
+
+    suspend fun setReduceMotion(enabled: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[REDUCE_MOTION] = enabled
+            }
+        }
+    }
+
+    /** Large-text flag for the TV layout scale; the settings UI lands in P4. */
+    val largeTextFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LARGE_TEXT] ?: false
+    }
+
+    suspend fun setLargeText(enabled: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[LARGE_TEXT] = enabled
+            }
+        }
+    }
+
+    val nowPlayingTitleAlignment: Flow<NowPlayingAlignment> =
+        context.dataStore.data.map { preferences ->
+            NowPlayingAlignment.valueOf(
+                preferences[NP_TITLE_ALIGNMENT] ?: NowPlayingAlignment.LEFT.name
+            )
+        }
+
+    suspend fun setNowPlayingTitleAlignment(nowPlayingTitleAlignment: NowPlayingAlignment) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[NP_TITLE_ALIGNMENT] = nowPlayingTitleAlignment.name
+            }
+        }
+    }
+
+    val nowPlayingLyricsAlignment: Flow<NowPlayingAlignment> =
+        context.dataStore.data.map { preferences ->
+            NowPlayingAlignment.valueOf(
+                preferences[NP_LYRICS_ALIGNMENT] ?: NowPlayingAlignment.CENTER.name
+            )
+        }
+
+    suspend fun setNowPlayingLyricsAlignment(nowPlayingLyricsAlignment: NowPlayingAlignment) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[NP_LYRICS_ALIGNMENT] = nowPlayingLyricsAlignment.name
+            }
+        }
+    }
+
+    val lyricsAutoScroll: Flow<Boolean> =
+        context.dataStore.data.map { preferences ->
+            preferences[LYRICS_AUTOSCROLL] ?: true
+        }
+
+    suspend fun setLyricsAutoScroll(autoScroll: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[LYRICS_AUTOSCROLL] = autoScroll
+            }
+        }
+    }
+
+
+    val lyricsRecenterAfterScroll: Flow<Boolean> =
+        context.dataStore.data.map { preferences ->
+            preferences[LYRICS_RECENTER_AFTER_SCROLL] ?: true
+        }
+
+    suspend fun setLyricsRecenterAfterScroll(recenterAfterScroll: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[LYRICS_RECENTER_AFTER_SCROLL] = recenterAfterScroll
+            }
+        }
+    }
+
+    val lyricsBounce: Flow<Boolean> =
+        context.dataStore.data.map { preferences ->
+            preferences[LYRICS_WORD_BOUNCE] ?: try {
+                Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE) == 0f
+            } catch (e: Exception) {
+                true
+            }
+        }
+
+    suspend fun setLyricsBounce(bounce: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[LYRICS_WORD_BOUNCE] = bounce
+            }
+        }
+    }
+
+    val oledProtectionMode: Flow<OLEDProtectionMode> = context.dataStore.data.map { preferences ->
+        try {
+            OLEDProtectionMode.valueOf(preferences[OLED_PROTECTION_MODE] ?: "OFF")
+        }
+        catch (ex: Exception) {
+            OLEDProtectionMode.OFF
+        }
+    }
+
+    suspend fun setOledProtectionMode(mode: OLEDProtectionMode) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[OLED_PROTECTION_MODE] = mode.name
+            }
+        }
+    }
+
+    val disableScreenStandby: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DISABLE_SCREEN_STANDBY] ?: false
+    }
+
+    suspend fun setDisableScreenStandby(enabled: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[DISABLE_SCREEN_STANDBY] = enabled
+            }
+        }
+    }
+
+    val albumDetailsButtons: Flow<List<ActionButton>> = context.dataStore.data.map { preferences ->
+        preferences[ALBUM_DETAILS_BUTTONS]?.let { Json.decodeFromString(it) } ?: listOf(
+            ActionButton(ActionButtonType.FAVORITE,false),
+            ActionButton(ActionButtonType.SHUFFLE,false),
+            ActionButton(ActionButtonType.ADD_TO_QUEUE,true),
+            ActionButton(ActionButtonType.PLAY_NEXT,true),
+            ActionButton(ActionButtonType.SEPARATOR,true),
+            ActionButton(ActionButtonType.FAVORITE,true),
+            ActionButton(ActionButtonType.ADD_TO_PLAYLIST,true),
+            ActionButton(ActionButtonType.DOWNLOAD,true)
+        )
+    }
+
+    suspend fun setAlbumDetailsButtons(buttons: List<ActionButton>) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[ALBUM_DETAILS_BUTTONS] = Json.encodeToString(buttons)
+            }
+        }
+    }
+
+    val artistDetailsButtons: Flow<List<ActionButton>> = context.dataStore.data.map { preferences ->
+        preferences[ARTIST_DETAILS_BUTTONS]?.let { Json.decodeFromString(it) } ?: listOf(
+            ActionButton(ActionButtonType.FAVORITE,false),
+            ActionButton(ActionButtonType.SHUFFLE,false),
+            ActionButton(ActionButtonType.ADD_TO_QUEUE,true),
+            ActionButton(ActionButtonType.PLAY_NEXT,true),
+            ActionButton(ActionButtonType.SEPARATOR,true),
+            ActionButton(ActionButtonType.FAVORITE,true),
+            ActionButton(ActionButtonType.ADD_TO_PLAYLIST,true),
+            ActionButton(ActionButtonType.DOWNLOAD,true)
+        )
+    }
+
+    suspend fun setArtistDetailsButtons(buttons: List<ActionButton>) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[ARTIST_DETAILS_BUTTONS] = Json.encodeToString(buttons)
+            }
+        }
+    }
+
+    val playlistDetailsButtons: Flow<List<ActionButton>> = context.dataStore.data.map { preferences ->
+        preferences[PLAYLIST_DETAILS_BUTTONS]?.let { Json.decodeFromString(it) } ?: listOf(
+            ActionButton(ActionButtonType.ADD_TO_QUEUE,false),
+            ActionButton(ActionButtonType.SHUFFLE,false),
+            ActionButton(ActionButtonType.ADD_TO_QUEUE,true),
+            ActionButton(ActionButtonType.PLAY_NEXT,true),
+            ActionButton(ActionButtonType.SEPARATOR,true),
+            ActionButton(ActionButtonType.DOWNLOAD,true)
+        )
+    }
+
+    suspend fun setPlaylistDetailsButtons(buttons: List<ActionButton>) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[PLAYLIST_DETAILS_BUTTONS] = Json.encodeToString(buttons)
+            }
+        }
+    }
+}

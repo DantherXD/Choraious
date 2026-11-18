@@ -1,0 +1,45 @@
+Chora — bundled font notices
+============================
+
+The TV typeface is selected at build time by the `fonts` flavor dimension. Both flavors
+provide the same four resource names (`res/font/chora_display_regular/medium/semibold/bold`),
+so application code never branches on the flavor. Each flavor owns its files outright — no
+resource is overridden across source sets.
+
+SF Pro (sfpro flavor)
+---------------------
+SF Pro is a trademark of Apple Inc. The `sfpro` flavor bundles it at the project owner's
+discretion (see apple-music-tv-spec.md §14.1), for personal use only. The typeface is NOT
+part of this repository and is NOT covered by its Apache-2.0 license: the files live in
+`app/src/sfpro/res/font/`, which is gitignored, and must never be published. The public
+`foss` flavor — what CI, F-Droid and store builds use — ships the open font below instead.
+
+Expected files (see `app/src/sfpro/FONTS.md`):
+
+  chora_display_regular.otf   SF Pro Display Regular   (400)
+  chora_display_medium.otf    SF Pro Display Medium    (500)
+  chora_display_semibold.otf  SF Pro Display Semibold  (600)
+  chora_display_bold.otf      SF Pro Display Bold      (700)
+
+Record the source and SHA-256 of each file here when they are added. They cannot be filled
+in from a clean checkout, and the `sfpro` variant does not compile without them.
+
+Inter (foss flavor)
+-------------------
+Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Licensed under the SIL Open Font License, Version 1.1.
+Full license text: `app/src/main/assets/licenses/Inter-OFL.txt`
+
+Source archive: https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip
+Archive SHA-256: 9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e
+
+Bundled faces (`app/src/foss/res/font/`, extracted from the archive, unmodified):
+
+  chora_display_regular.ttf   InterDisplay-Regular.ttf
+    99614bda7ff423aaf470990692dd93613a5971ab4446e4a6d5a83b3d74865074
+  chora_display_medium.ttf    InterDisplay-Medium.ttf
+    99665c256585aeaab2d06950c2d7715cca8fd7883c2d0e7a421b8b287e1f17de
+  chora_display_semibold.ttf  InterDisplay-SemiBold.ttf
+    0310d7a325896129730c6c8cf9a6e0f81ee258bedf77b1ff059b2a7b75f74e02
+  chora_display_bold.ttf      InterDisplay-Bold.ttf
+    b74c8e0dd744b3347faca4c96bc7b2e32f7d6f62300a79b1d1a99331e44a5bc4

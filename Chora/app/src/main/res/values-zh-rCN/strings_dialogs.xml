@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_no_provider_splash">您还没有添加媒体源。现在添加一个来开始收听吧！</string>
+    <string name="onboarding_all_done">一切就绪！现在您可以开始收听了！</string>
+    <string name="onboarding_lets_go">Let\'s Go!</string>
+    <string name="radio_add_internet_radio">添加网络电台</string>
+    <string name="radio_modify_internet_radio">修改 %s</string>
+    <string name="label_radio_name">电台名称</string>
+    <string name="label_radio_url">电台地址</string>
+    <string name="label_radio_homepage">Radio Homepage URL</string>
+    <string name="button_new_playlist">新歌单</string>
+    <string name="playlist_delete_playlist">删除歌单</string>
+    <string name="delete_playlist_are_you_sure">您确定要删除该歌单吗？</string>
+    <string name="add_to_playlist_title">Add &lt;i&gt;%s&lt;/i&gt; To Playlist</string>
+    <string name="add_to_playlist_songs">%s Songs</string>
+    <string name="new_playlist_playlist_name">歌单名称</string>
+    <string name="button_sort_by">排序方式</string>
+    <string name="sort_by_album">Album</string>
+    <string name="sort_by_album_artist">Album Artist</string>
+    <string name="sort_by_album_count">Album Count</string>
+    <string name="sort_by_artist">Artist</string>
+    <string name="sort_by_bpm">BPM</string>
+    <string name="sort_by_channels">Channels</string>
+    <string name="sort_by_comment">Comment</string>
+    <string name="sort_by_duration">Duration</string>
+    <string name="sort_by_explicit_status">Explicit</string>
+    <string name="sort_by_favorite">收藏</string>
+    <string name="sort_by_genre">Genre</string>
+    <string name="sort_by_id">ID</string>
+    <string name="sort_by_name">Name</string>
+    <string name="sort_by_play_count">Play Count</string>
+    <string name="sort_by_random">Random</string>
+    <string name="sort_by_rating">Rating</string>
+    <string name="sort_by_recently_added">Recently Added</string>
+    <string name="sort_by_recently_played">Recently Played</string>
+    <string name="sort_by_release_date">Release Date</string>
+    <string name="sort_by_song_count">Song Count</string>
+    <string name="sort_by_year">Year</string>
+    <string name="notification_download_name">Download Notifications</string>
+    <string name="notification_download_desc">Notifications for download status</string>
+    <string name="now_playing_set_sleep_timer">Set Sleep Timer</string>
+</resources>

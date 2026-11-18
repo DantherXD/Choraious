@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_welcome">Benvenuto/a,\n%s!</string>
+    <string name="home_recently_added">Aggiunte Recentemente</string>
+    <string name="home_most_played">Più Ascoltate</string>
+    <string name="home_recently_played">Ascoltate Recentemente</string>
+    <string name="home_explore_library">Esplora La Tua Libreria</string>
+    <string name="home_settings">Impostazioni</string>
+    <string name="artist_details_discography">Discografia</string>
+    <string name="album_details_disc">Disco %s</string>
+    <string name="now_playing_lyrics_credit">Testi forniti da %s</string>
+</resources>
