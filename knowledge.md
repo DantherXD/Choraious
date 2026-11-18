@@ -27,8 +27,10 @@ Run from `Chora/`. Requires JDK 21 and an Android SDK with platform 37 (create
 - Tests: no `src/test` or `src/androidTest` sources exist yet. JUnit/Espresso deps are
   declared but there is nothing to run; do not claim test coverage.
 
-CI: `.github/workflows/build.yml` builds `assembleFossDebug` on push/PR with JDK 21 and uploads
-`app/build/outputs/apk/foss/debug/app-foss-debug.apk`.
+CI: `.github/workflows/build.yml` **at the repository root** (GitHub ignores a workflow nested in
+`Chora/`) builds `assembleFossDebug` on push/PR with JDK 21. Its run steps use
+`working-directory: Chora`, and the uploaded artifact path is
+`Chora/app/build/outputs/apk/foss/debug/app-foss-debug.apk`.
 
 Version bumps: edit `versionCode` / `versionName` manually in `app/build.gradle.kts`
 (currently 311 / 1.31.1).

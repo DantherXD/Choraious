@@ -1,3 +1,6 @@
+# GitHub only looks for workflows in `.github/workflows/` at the repository root.
+# The Android project itself lives in `Chora/`, so every run step executes there and
+# artifact paths are prefixed with it.
 name: dev build
 
 on:
@@ -12,6 +15,10 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Chora
 
 jobs:
   build:
@@ -45,6 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-foss-debug
-          path: app/build/outputs/apk/foss/debug/app-foss-debug.apk
+          # Artifact paths are relative to the workspace root, not the step's working directory.
+          path: Chora/app/build/outputs/apk/foss/debug/app-foss-debug.apk
           if-no-files-found: error
           retention-days: 14
