@@ -85,3 +85,13 @@ Version bumps: edit `versionCode` / `versionName` manually in `app/build.gradle.
   2026.09.00, KSP for Hilt, Ktor/Ktorfit, Coil 3, kotlinx.serialization, Media3 1.11.x.
   Use versions from `gradle/libs.versions.toml`; do not add libraries ad hoc.
 - Release signing, `versionCode` bumps and pushes are release work — only do them when asked.
+
+
+## Phase 4 (TV settings, dialogs, release)
+
+- TV settings/dialog primitives: `ui/elements/tv/apple/TvDialogSurface.kt` (`TvDialogSurface`, `TvDialogOptionRow`, `TvDialogTextField`, `TvDialogActions`) and `TvSettingsRows.kt` (`TvSwitchRow`, `TvSettingsSliderRow`, `TvSettingsSection`). New TV dialogs should use these instead of `AlertDialog`.
+- Dialogs are overlay windows, so the TV preset is `overlay` tint + hairline (no backdrop sampling is possible there). The panel swallows taps so the window beneath keeps focus.
+- `GenericListDialog` / `GenericCheckDialog` render through the new shell; their signatures are unchanged, so pickers need no edits.
+- Large Text is a whole-ramp factor in `TvTheme` (`TvTypeScale.scaled`, capped against the system font scale) plus `LocalTvLargeText` for grids.
+- Release APKs are signed from `CHORA_KEYSTORE_FILE`/`CHORA_KEY_ALIAS`/`CHORA_KEYSTORE_PASSWORD`/`CHORA_KEY_PASSWORD` when set, otherwise with the debug key. CI builds `assembleFossRelease` and attaches the raw APK to a GitHub Release (workflow_dispatch `publish: true` or a `v*` tag) — Actions artifacts are always zipped.
+- `assembleFossRelease` (R8) takes over 5 minutes cold: run it detached with `nohup … > /tmp/build.log 2>&1 &` and poll the log; the sync shell limit is five minutes.

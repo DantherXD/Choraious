@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvLargeText
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
@@ -63,7 +64,8 @@ fun <T> TvMediaGrid(
 
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Fixed(5),
+        // Large Text drops a column so the bigger titles still fit (spec §6.8).
+        columns = GridCells.Fixed(if (LocalTvLargeText.current) 4 else 5),
         modifier = modifier
             .fillMaxSize()
             .focusGroup(),

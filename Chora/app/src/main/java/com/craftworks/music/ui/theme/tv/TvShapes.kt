@@ -91,6 +91,19 @@ object TvDimens {
     val menuWidth = 400.dp
     val menuMaxHeight = 400.dp
 
+    // ---- Settings and dialogs (spec §6.8/§6.9) ----------------------------------------------
+    /** Dialog max width: 720 spec points halved to this canvas. */
+    val dialogMaxWidth = 360.dp
+    /** List area inside a dialog; the canvas is 540dp tall, so the list must leave room. */
+    val dialogListMaxHeight = 240.dp
+    /** Default switch geometry: a 32×18dp track with a 14dp knob. */
+    val switchWidth = 32.dp
+    val switchHeight = 18.dp
+    val switchKnob = 14.dp
+    val switchKnobPadding = 2.dp
+    /** Hairline used by rows, glass and dialog frames. */
+    val hairlineWidth = 1.dp
+
     // ---- Now Playing (spec §6.7) ------------------------------------------------------------
     // Halved spec points, like the rest of this file: 560dp artwork -> 280dp, 720dp transport
     // bar -> 360dp, 40/44% panels capped at 720/800 spec points -> 360/400dp.

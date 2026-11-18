@@ -1,60 +1,47 @@
 package com.craftworks.music.ui.elements.dialogs.tv
 
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.tv.material3.Button
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.ui.elements.dialogs.playlistToDelete
+import com.craftworks.music.ui.elements.tv.apple.TvButtonStyle
+import com.craftworks.music.ui.elements.tv.apple.TvDialogActions
+import com.craftworks.music.ui.elements.tv.apple.TvDialogSurface
+import com.craftworks.music.ui.elements.tv.apple.TvGlassButton
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 
-
+/** Destructive confirmation in the shared TV dialog shell (spec §6.9). */
 @Composable
 fun PlaylistDeletionConfirmationDialog(
     setShowDialog: (Boolean) -> Unit,
     viewModel: PlaylistScreenViewModel = hiltViewModel()
 ) {
-    AlertDialog(
+    Dialog(
         onDismissRequest = { setShowDialog(false) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Box(
-                modifier = Modifier.focusable()
-            ) {
-                Text(
-                    text = stringResource(R.string.delete_playlist_are_you_sure),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleLarge
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        TvDialogSurface(
+            onDismiss = { setShowDialog(false) },
+            title = stringResource(R.string.playlist_delete_playlist),
+            subtitle = stringResource(R.string.delete_playlist_are_you_sure),
+        ) {
+            TvDialogActions {
+                TvGlassButton(
+                    text = stringResource(R.string.action_close),
+                    onClick = { setShowDialog(false) },
                 )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    viewModel.deletePlaylist(playlistToDelete.value)
-                    setShowDialog(false)
-                }
-            ) {
-                Text(
-                    stringResource(R.string.playlist_delete_playlist)
-                )
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = {
-                setShowDialog(false)
-            }) {
-                Text(
-                    stringResource(R.string.action_close)
+                TvGlassButton(
+                    text = stringResource(R.string.playlist_delete_playlist),
+                    style = TvButtonStyle.Primary,
+                    onClick = {
+                        viewModel.deletePlaylist(playlistToDelete.value)
+                        setShowDialog(false)
+                    },
                 )
             }
         }
-    )
+    }
 }

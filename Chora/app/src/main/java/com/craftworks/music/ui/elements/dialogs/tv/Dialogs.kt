@@ -1,37 +1,34 @@
 package com.craftworks.music.ui.elements.dialogs.tv
 
-import android.os.Build
-import android.view.Gravity
-import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.tv.material3.Button
-import androidx.tv.material3.Checkbox
-import androidx.tv.material3.ListItem
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.RadioButton
-import androidx.tv.material3.Text
 import com.craftworks.music.R
-import com.craftworks.music.ui.playing.NowPlayingBackground
-import com.gigamole.composefadingedges.FadingEdgesGravity
-import com.gigamole.composefadingedges.content.FadingEdgesContentType
-import com.gigamole.composefadingedges.content.scrollconfig.FadingEdgesScrollConfig
-import com.gigamole.composefadingedges.verticalFadingEdges
+import com.craftworks.music.ui.elements.tv.apple.TvButtonStyle
+import com.craftworks.music.ui.elements.tv.apple.TvDialogActions
+import com.craftworks.music.ui.elements.tv.apple.TvDialogOptionRow
+import com.craftworks.music.ui.elements.tv.apple.TvDialogSurface
+import com.craftworks.music.ui.elements.tv.apple.TvGlassButton
+import com.craftworks.music.ui.theme.tv.TvDimens
 
+/**
+ * The shared single-choice list dialog behind every appearance/playback picker.
+ *
+ * Restyled in P4 to the spec §6.9 shell: `overlay` glass on a scrim, 24dp radius, trapped focus,
+ * Back = Cancel, red dot for the current value. The signature is unchanged so the pickers
+ * (OLED, transcoding bitrate/format, theme, alignment, …) needed no edits.
+ *
+ * `leftAligned` is retained only for source compatibility; dialogs are centred on TV.
+ */
 @Composable
 fun <T> GenericListDialog(
     setShowDialog: (Boolean) -> Unit,
@@ -42,67 +39,29 @@ fun <T> GenericListDialog(
     label: @Composable (T) -> String,
     modifier: Modifier = Modifier,
     helperText: (T) -> String = { "" },
-    leftAligned: Boolean = false
+    @Suppress("UNUSED_PARAMETER") leftAligned: Boolean = false,
 ) {
-    AlertDialog(
-        properties = DialogProperties(
-            usePlatformDefaultWidth = leftAligned
-        ),
-        modifier = modifier,
+    Dialog(
         onDismissRequest = { setShowDialog(false) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = stringResource(titleRes),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
-            if (leftAligned) {
-                val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-                SideEffect {
-                    window?.let {
-                        it.setGravity(Gravity.END)
-                        it.setLayout(
-                            WindowManager.LayoutParams.WRAP_CONTENT,
-                            WindowManager.LayoutParams.MATCH_PARENT
-                        )
-                    }
-                }
-            }
-
-            val lazyColumnState = rememberLazyListState()
-
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        TvDialogSurface(
+            onDismiss = { setShowDialog(false) },
+            modifier = modifier,
+            title = stringResource(titleRes),
+        ) {
             LazyColumn(
-                state = lazyColumnState,
                 modifier = Modifier
-                    .verticalFadingEdges(
-                        FadingEdgesContentType.Dynamic.Lazy.List(
-                            FadingEdgesScrollConfig.Dynamic(), lazyColumnState
-                        ), FadingEdgesGravity.All, 64.dp
-                    ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(8.dp)
+                    .fillMaxWidth()
+                    .heightIn(max = TvDimens.dialogListMaxHeight),
+                verticalArrangement = Arrangement.spacedBy(TvDimens.space4),
+                contentPadding = PaddingValues(vertical = TvDimens.space4),
             ) {
                 items(options) { option ->
-                    val isSelected = option == selectedOption
-
-                    ListItem(
-                        selected = isSelected,
-                        enabled = !(option == NowPlayingBackground.ANIMATED_BLUR && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU),
-                        headlineContent = {
-                            Text(label(option) + helperText(option))
-                        },
-                        trailingContent = {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    onOptionSelected(option)
-                                    setShowDialog(false)
-                                }
-                            )
-                        },
+                    TvDialogOptionRow(
+                        label = label(option),
+                        helper = helperText(option).ifBlank { null },
+                        selected = option == selectedOption,
                         onClick = {
                             onOptionSelected(option)
                             setShowDialog(false)
@@ -110,11 +69,11 @@ fun <T> GenericListDialog(
                     )
                 }
             }
-        },
-        confirmButton = { }
-    )
+        }
+    }
 }
 
+/** The shared multi-choice dialog (navbar/home ordering): checkbox rows plus Reset/Done. */
 @Composable
 fun <T> GenericCheckDialog(
     setShowDialog: (Boolean) -> Unit,
@@ -123,63 +82,46 @@ fun <T> GenericCheckDialog(
     label: @Composable (T) -> String,
     isEnabled: (T) -> Boolean,
     onCheckedChange: (index: Int, checked: Boolean) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
 ) {
-    AlertDialog(
+    Dialog(
         onDismissRequest = { setShowDialog(false) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = stringResource(titleRes),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        TvDialogSurface(
+            onDismiss = { setShowDialog(false) },
+            title = stringResource(titleRes),
+        ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = TvDimens.dialogListMaxHeight),
+                verticalArrangement = Arrangement.spacedBy(TvDimens.space4),
+                contentPadding = PaddingValues(vertical = TvDimens.space4),
             ) {
-                items(items) { item ->
-                    val index = items.indexOf(item)
-
-                    ListItem(
-                        selected = false,
+                itemsIndexed(items) { index, item ->
+                    TvDialogOptionRow(
+                        label = label(item),
+                        selected = isEnabled(item),
                         onClick = { onCheckedChange(index, !isEnabled(item)) },
-                        onLongClick = {
-
-                        },
-                        headlineContent = {
-                            Text(
-                                text = label(item),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        },
-                        leadingContent = {
-                            Checkbox(
-                                checked = isEnabled(item),
-                                onCheckedChange = null
-                            )
-                        },
                     )
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { setShowDialog(false) }
-            ) {
-                Text(stringResource(R.string.action_done))
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = {
-                onReset()
-                setShowDialog(false)
-            }) {
-                Text(stringResource(R.string.action_reset))
+
+            TvDialogActions {
+                TvGlassButton(
+                    text = stringResource(R.string.action_reset),
+                    onClick = {
+                        onReset()
+                        setShowDialog(false)
+                    },
+                )
+                TvGlassButton(
+                    text = stringResource(R.string.action_done),
+                    style = TvButtonStyle.Primary,
+                    onClick = { setShowDialog(false) },
+                )
             }
         }
-    )
+    }
 }
-

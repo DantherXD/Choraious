@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("com.google.devtools.ksp")
@@ -7,6 +9,16 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ktorfit)
 }
+
+// Release signing: one stable key for every published APK, supplied by the environment so the
+// keystore never lives in the repo. Without the four variables (a local build, or a fork without
+// the secrets) the release build keeps signing with the debug key, exactly as it always did.
+val releaseKeystoreFile = System.getenv("CHORA_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+val releaseKeystorePassword = System.getenv("CHORA_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val releaseKeyAlias = System.getenv("CHORA_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+val releaseKeyPassword = System.getenv("CHORA_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+val hasReleaseSigning = releaseKeystoreFile != null && releaseKeystorePassword != null &&
+    releaseKeyAlias != null && releaseKeyPassword != null
 
 android {
     namespace = "com.craftworks.music"
@@ -50,6 +62,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = File(releaseKeystoreFile!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -58,7 +81,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (hasReleaseSigning) "release" else "debug")
         }
         debug {
             isDebuggable = false

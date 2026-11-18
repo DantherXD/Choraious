@@ -74,3 +74,41 @@ internal fun defaultTvTypeScale(): TvTypeScale = TvTypeScale(
 )
 
 val LocalTvTypography = staticCompositionLocalOf { defaultTvTypeScale() }
+
+/**
+ * True when the Large Text setting is raising the ramp (spec §6.8). Screens only need this to
+ * drop a column from dense grids; every style already reflects the scale through
+ * [LocalTvTypography].
+ */
+val LocalTvLargeText = staticCompositionLocalOf { false }
+
+/**
+ * Large Text: scales the whole ramp rather than individual styles, so hierarchy and tracking hold.
+ * The cap against the system font scale is applied by the caller (`TvTheme`), because `sp` is
+ * already multiplied by that scale.
+ */
+fun TvTypeScale.scaled(factor: Float): TvTypeScale {
+    if (factor == 1f) return this
+
+    fun TextStyle.scaled() = copy(
+        fontSize = fontSize * factor,
+        lineHeight = lineHeight * factor,
+        letterSpacing = letterSpacing * factor,
+    )
+
+    return TvTypeScale(
+        displayHero = displayHero.scaled(),
+        screenTitle = screenTitle.scaled(),
+        sectionTitle = sectionTitle.scaled(),
+        cardTitle = cardTitle.scaled(),
+        cardSubtitle = cardSubtitle.scaled(),
+        body = body.scaled(),
+        caption = caption.scaled(),
+        button = button.scaled(),
+        tab = tab.scaled(),
+        npTitle = npTitle.scaled(),
+        npArtist = npArtist.scaled(),
+        lyricsActive = lyricsActive.scaled(),
+        lyricsInactive = lyricsInactive.scaled(),
+    )
+}

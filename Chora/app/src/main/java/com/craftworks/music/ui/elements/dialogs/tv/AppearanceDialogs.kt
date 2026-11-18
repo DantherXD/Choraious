@@ -30,6 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.Icon
@@ -41,6 +43,11 @@ import com.craftworks.music.data.model.Screen
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.OLEDProtectionMode
+import com.craftworks.music.ui.elements.tv.apple.TvButtonStyle
+import com.craftworks.music.ui.elements.tv.apple.TvDialogActions
+import com.craftworks.music.ui.elements.tv.apple.TvDialogSurface
+import com.craftworks.music.ui.elements.tv.apple.TvDialogTextField
+import com.craftworks.music.ui.elements.tv.apple.TvGlassButton
 import com.craftworks.music.ui.playing.NowPlayingAlignment
 import com.craftworks.music.ui.playing.NowPlayingBackground
 import com.craftworks.music.ui.screens.HomeItem
@@ -56,72 +63,46 @@ fun NameDialog(
     val username by AppearanceSettingsManager(context).usernameFlow.collectAsStateWithLifecycle("Username")
     var usernameTextField by remember(username) { mutableStateOf(username) }
 
-    val textStyle = MaterialTheme.typography.bodyMedium.copy(
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-
-    AlertDialog(
+    Dialog(
         onDismissRequest = { setShowDialog(false) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        text = {
-            BasicTextField(
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        TvDialogSurface(
+            onDismiss = { setShowDialog(false) },
+            title = stringResource(R.string.appearance_username),
+            subtitle = stringResource(R.string.settings_section_account),
+        ) {
+            TvDialogTextField(
                 value = usernameTextField,
-                onValueChange = {
+                onValueChange = { usernameTextField = it },
+                label = stringResource(R.string.appearance_username),
+                onDone = {
                     coroutineScope.launch {
-                        AppearanceSettingsManager(context).setUsername(it)
-                    }
-                },
-                textStyle = textStyle,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                singleLine = true,
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        coroutineScope.launch {
-                            AppearanceSettingsManager(context).setUsername(username)
-                            setShowDialog(false)
-                        }
-                    }
-                ),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .width(320.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                RoundedCornerShape(percent = 50),
-                            ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                painterResource(id = R.drawable.s_a_username),
-                                contentDescription = stringResource(R.string.appearance_username),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(end = 12.dp),
-                            )
-                            innerTextField()
-                        }
+                        AppearanceSettingsManager(context).setUsername(usernameTextField)
+                        setShowDialog(false)
                     }
                 },
             )
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        AppearanceSettingsManager(context).setUsername(username)
-                        setShowDialog(false)
-                    }
-                }
-            ) {
-                Text(stringResource(R.string.action_done))
+
+            TvDialogActions {
+                TvGlassButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = { setShowDialog(false) },
+                )
+                TvGlassButton(
+                    text = stringResource(R.string.action_done),
+                    style = TvButtonStyle.Primary,
+                    onClick = {
+                        coroutineScope.launch {
+                            AppearanceSettingsManager(context).setUsername(usernameTextField)
+                            setShowDialog(false)
+                        }
+                    },
+                )
             }
         }
-    )
+    }
 }
-
 
 @Composable
 fun ThemeDialog(

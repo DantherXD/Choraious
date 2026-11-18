@@ -44,6 +44,8 @@ import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.craftworks.music.R
+import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.data.model.ProviderType
 import com.craftworks.music.data.providers.media.navidrome.NavidromeMediaProvider
 import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
@@ -73,7 +75,7 @@ fun CreateSubsonicProviderDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = LocalTvColors.current.bgCanvas
 
     var step by remember { mutableStateOf(DialogStep.URL) }
     val (nextFocus, loginFocus, addFocus) = remember { FocusRequester.createRefs() }
@@ -97,7 +99,7 @@ fun CreateSubsonicProviderDialog(
     ) {
         Text(
             text = stringResource(R.string.settings_media_providers),
-            style = MaterialTheme.typography.titleLarge
+            style = LocalTvTypography.current.screenTitle
         )
 
         Row(

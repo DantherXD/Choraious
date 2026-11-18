@@ -5,11 +5,19 @@ name: dev build
 
 on:
   push:
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the signed APK as a GitHub Release asset"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  # Releases need write access to publish the APK asset; everything else only reads.
+  contents: write
 
 # A new push to the same branch replaces the run that is still going.
 concurrency:
@@ -22,7 +30,7 @@ defaults:
 
 jobs:
   build:
-    name: assembleFossDebug
+    name: assembleFossRelease
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -42,17 +50,38 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build debug APK (foss flavor)
+      - name: Restore the release signing key
+        # One keystore signs every published APK. Store it base64-encoded in the
+        # CHORA_KEYSTORE_BASE64 secret; the passwords/alias are separate secrets.
+        working-directory: .
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CHORA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/chora-release.jks"
+            echo "CHORA_KEYSTORE_FILE=$RUNNER_TEMP/chora-release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::notice::CHORA_KEYSTORE_BASE64 is not set; the release APK will be signed with the debug key."
+          fi
+
+      - name: Build release APK (foss flavor)
         # `foss` only: the `sfpro` flavor needs licensed SF Pro Display files that are
         # deliberately kept out of the repo (app/src/sfpro/FONTS.md), so it cannot build here.
         # The Android SDK platform/build-tools for compileSdk 37 are provisioned by AGP.
-        run: ./gradlew assembleFossDebug
+        env:
+          CHORA_KEYSTORE_PASSWORD: ${{ secrets.CHORA_KEYSTORE_PASSWORD }}
+          CHORA_KEY_ALIAS: ${{ secrets.CHORA_KEY_ALIAS }}
+          CHORA_KEY_PASSWORD: ${{ secrets.CHORA_KEY_PASSWORD }}
+        run: ./gradlew assembleFossRelease
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Publish the APK as a release asset
+        # A release asset is the raw .apk. Actions artifacts are always zipped, which is why
+        # this does not use upload-artifact.
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish == true
+        uses: softprops/action-gh-release@v2
         with:
-          name: app-foss-debug
-          # Artifact paths are relative to the workspace root, not the step's working directory.
-          path: Chora/app/build/outputs/apk/foss/debug/app-foss-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Build {0}', github.run_number) }}
+          files: Chora/app/build/outputs/apk/foss/release/app-foss-release.apk
+          generate_release_notes: true
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}

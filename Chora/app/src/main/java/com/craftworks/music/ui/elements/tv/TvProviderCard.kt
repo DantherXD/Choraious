@@ -45,6 +45,8 @@ import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.MediaProviderSettingsManager
+import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvTypography
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -70,6 +72,17 @@ fun TvProviderCard(provider: MediaProvider) {
             .focusRequester(mainFocus),
         selected = checked,
         scale = ListItemScale.None,
+        // TV palette (spec §6.9): `surface.1` card, white focus, no lift.
+        colors = ListItemDefaults.colors(
+            containerColor = LocalTvColors.current.surface1,
+            contentColor = LocalTvColors.current.labelPrimary,
+            focusedContainerColor = LocalTvColors.current.surface3,
+            focusedContentColor = LocalTvColors.current.labelPrimary,
+            pressedContainerColor = LocalTvColors.current.surface2,
+            pressedContentColor = LocalTvColors.current.labelPrimary,
+            selectedContainerColor = LocalTvColors.current.surface2,
+            selectedContentColor = LocalTvColors.current.labelPrimary,
+        ),
         leadingContent = {
             Icon(
                 painter = painterResource(R.drawable.s_m_navidrome),
@@ -80,7 +93,7 @@ fun TvProviderCard(provider: MediaProvider) {
         headlineContent = {
             Text(
                 text = stringResource(provider.providerName),
-                style = MaterialTheme.typography.bodyLarge,
+                style = LocalTvTypography.current.cardTitle,
                 modifier = Modifier
             )
         },
@@ -94,7 +107,7 @@ fun TvProviderCard(provider: MediaProvider) {
                         is SubsonicMediaProvider -> provider.providerData.url
                         else -> ""
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LocalTvTypography.current.cardSubtitle,
                 )
                 if (libraries.size > 1 && provider == currentProvider) {
                     Row(
@@ -196,6 +209,17 @@ fun TvLyricsProviderCard(
             },
         selected = provider.enabled,
         scale = ListItemScale.None,
+        // TV palette (spec §6.9): `surface.1` card, white focus, no lift.
+        colors = ListItemDefaults.colors(
+            containerColor = LocalTvColors.current.surface1,
+            contentColor = LocalTvColors.current.labelPrimary,
+            focusedContainerColor = LocalTvColors.current.surface3,
+            focusedContentColor = LocalTvColors.current.labelPrimary,
+            pressedContainerColor = LocalTvColors.current.surface2,
+            pressedContentColor = LocalTvColors.current.labelPrimary,
+            selectedContainerColor = LocalTvColors.current.surface2,
+            selectedContentColor = LocalTvColors.current.labelPrimary,
+        ),
         leadingContent = {
             Image(
                 painter = painterResource(provider.source.icon),
@@ -206,14 +230,14 @@ fun TvLyricsProviderCard(
         headlineContent = {
             Text(
                 text = provider.source.displayName,
-                style = MaterialTheme.typography.bodyLarge,
+                style = LocalTvTypography.current.cardTitle,
                 modifier = Modifier
             )
         },
         supportingContent = {
             Text(
                 text = url,
-                style = MaterialTheme.typography.bodyMedium,
+                style = LocalTvTypography.current.cardSubtitle,
                 modifier = Modifier
             )
         },

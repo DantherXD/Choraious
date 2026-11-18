@@ -1233,3 +1233,35 @@ Library" and lands on the Library tab. Reordering with a Subsonic/Navidrome prov
 
 Screenshots/perf still owed at this gate: now playing, + lyrics, + queue, OLED variant, reduce-motion
 variant, gfxinfo for a track change and a panel animation.
+
+
+## Appendix H — Phase 4 log (settings, dialogs, provider setup, release)
+
+### What shipped
+
+| Area | Result |
+| --- | --- |
+| Settings hub (`TvSettingScreen.kt`) | Grouped list instead of three wide buttons: Account (username, opens `NameDialog`), Playback, Media providers, Lyrics providers, Appearance, About (`BuildConfig.VERSION_NAME`). `TvSettingsSection` headers, `TvListRow` rows, `focusRestorer` on the list. |
+| TV appearance (`TvSettingsAppearance.kt`) | Pruned to OLED mode, screen standby, Reduce Motion, Large Text, provider logo, lyrics autoscroll / recenter / speed. Theme, background style, nav/home ordering, alignment, blur, more-info, refresh animation and track numbers are gone from TV. |
+| Large Text | `TvTypeScale.scaled(factor)` + `LocalTvLargeText`; `TvTheme` multiplies the ramp by `min(1.15, 1.3 / systemFontScale)`, `TvMediaGrid` drops 5 → 4 columns, `TvListRow`/`TvTrackRow` use `heightIn(min = …)` so rows grow. |
+| Dialog shell (`TvDialogSurface.kt`) | One overlay component: scrim, `overlay` fill + hairline, 24dp radius, title/subtitle, trapped focus, panel swallows taps so the window underneath keeps focus, Back = dismiss. Plus `TvDialogOptionRow` (red dot for current value), `TvDialogTextField`, `TvDialogActions`. |
+| Settings rows (`TvSettingsRows.kt`) | `TvSwitchRow`, `TvSettingsSliderRow` (labelled − / +, no Material slider), `TvSettingsSection`. Switch geometry (32×18/14 knob) comes from `TvDimens`. |
+| Converted dialogs | `GenericListDialog`/`GenericCheckDialog` (covers every appearance and playback picker plus OLED/bitrate/format), `NameDialog`, `SelectProviderType`, `ModifyLrcLibProviderDialog`, `PlaylistDeletionConfirmationDialog`, `OnboardingDialog`. Provider cards now use `surface.1` and the TV type ramp. |
+| Provider setup | Wizard entry, LRCLIB editor and the two creation sheets use the TV canvas and screen title; the creation sheets keep their existing focus-chain internals. |
+| Release | `app/build.gradle.kts` reads `CHORA_KEYSTORE_FILE` / `CHORA_KEY_ALIAS` / `CHORA_KEYSTORE_PASSWORD` / `CHORA_KEY_PASSWORD` and signs release with one key when present, falling back to the debug key otherwise. CI builds `assembleFossRelease` and publishes the raw `app-foss-release.apk` as a GitHub Release asset (artifacts are always zipped) on tags or a manual run with `publish`. |
+
+### Verification
+
+- `:app:compileFossDebugKotlin` green after each group of edits.
+- `:app:assembleFossDebug` **and** `:app:assembleFossRelease` green locally (release R8 minification included), so the CI job exercises the same task it publishes.
+- Phone sources untouched: every file in this phase is under `ui/screens/tv`, `ui/elements/dialogs/tv`, `ui/elements/tv`, `ui/theme/tv`, plus `app/build.gradle.kts` and the workflow.
+
+### Deliberately not converted (documented gap)
+
+- `SongDialog`, `AddRadioDialog`/`ModifyRadioDialog` and the two provider *creation* forms are full-screen editors; they were retinted (TV canvas, screen title) but keep their internal layout rather than the 360dp sheet, because their field stacks need the full canvas width.
+
+### CI secrets
+
+- `CHORA_KEYSTORE_BASE64` — base64 of the single release keystore.
+- `CHORA_KEYSTORE_PASSWORD`, `CHORA_KEY_ALIAS`, `CHORA_KEY_PASSWORD` — matching credentials.
+- Without them the workflow still passes and publishes a debug-key-signed APK with a notice.

@@ -48,6 +48,8 @@ import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.craftworks.music.R
+import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.data.model.MediaProviderData
 import com.craftworks.music.data.model.MusicFolder
 import com.craftworks.music.data.providers.media.local.LocalMediaProvider
@@ -85,7 +87,7 @@ fun CreateLocalProviderDialog(
             ?: emptyList()
     }
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = LocalTvColors.current.bgCanvas
     val (content, action) = remember { FocusRequester.createRefs() }
 
     val context = LocalContext.current
