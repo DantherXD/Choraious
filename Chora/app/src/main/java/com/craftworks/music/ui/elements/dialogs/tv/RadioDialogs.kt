@@ -35,6 +35,8 @@ import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.craftworks.music.R
+import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import kotlinx.coroutines.launch
 
 @Composable
@@ -50,16 +52,16 @@ fun AddRadioDialog(
 
     val coroutineScope = rememberCoroutineScope()
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = LocalTvColors.current.bgCanvas
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedBorderColor = LocalTvColors.current.accent,
         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
         errorBorderColor = MaterialTheme.colorScheme.error,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        errorTextColor = MaterialTheme.colorScheme.error
+        cursorColor = LocalTvColors.current.accent,
+        focusedTextColor = LocalTvColors.current.labelPrimary,
+        unfocusedTextColor = LocalTvColors.current.labelSecondary,
+        errorTextColor = LocalTvColors.current.destructive
     )
 
     Dialog(
@@ -196,16 +198,16 @@ fun ModifyRadioDialog(
 
     val coroutineScope = rememberCoroutineScope()
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = LocalTvColors.current.bgCanvas
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedBorderColor = LocalTvColors.current.accent,
         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
         errorBorderColor = MaterialTheme.colorScheme.error,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        errorTextColor = MaterialTheme.colorScheme.error
+        cursorColor = LocalTvColors.current.accent,
+        focusedTextColor = LocalTvColors.current.labelPrimary,
+        unfocusedTextColor = LocalTvColors.current.labelSecondary,
+        errorTextColor = LocalTvColors.current.destructive
     )
 
     Dialog(

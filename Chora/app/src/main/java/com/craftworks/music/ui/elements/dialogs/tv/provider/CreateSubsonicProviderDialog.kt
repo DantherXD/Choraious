@@ -81,13 +81,13 @@ fun CreateSubsonicProviderDialog(
     val (nextFocus, loginFocus, addFocus) = remember { FocusRequester.createRefs() }
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedBorderColor = LocalTvColors.current.accent,
         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
         errorBorderColor = MaterialTheme.colorScheme.error,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        errorTextColor = MaterialTheme.colorScheme.error
+        cursorColor = LocalTvColors.current.accent,
+        focusedTextColor = LocalTvColors.current.labelPrimary,
+        unfocusedTextColor = LocalTvColors.current.labelSecondary,
+        errorTextColor = LocalTvColors.current.destructive
     )
 
     var isError: Boolean by remember { mutableStateOf(false) }

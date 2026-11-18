@@ -1256,9 +1256,9 @@ variant, gfxinfo for a track change and a panel animation.
 - `:app:assembleFossDebug` **and** `:app:assembleFossRelease` green locally (release R8 minification included), so the CI job exercises the same task it publishes.
 - Phone sources untouched: every file in this phase is under `ui/screens/tv`, `ui/elements/dialogs/tv`, `ui/elements/tv`, `ui/theme/tv`, plus `app/build.gradle.kts` and the workflow.
 
-### Deliberately not converted (documented gap)
+### Full-screen editors (why they are not 360dp sheets)
 
-- `SongDialog`, `AddRadioDialog`/`ModifyRadioDialog` and the two provider *creation* forms are full-screen editors; they were retinted (TV canvas, screen title) but keep their internal layout rather than the 360dp sheet, because their field stacks need the full canvas width.
+- `SongDialog`, `AddRadioDialog`/`ModifyRadioDialog` and the two provider creation forms are multi-column editors. They now share the TV palette and ramp — `bgCanvas` sheet, accent cursor/focus border, `labelPrimary`/`labelSecondary` text, `destructive` errors, `screenTitle`/`cardTitle`/`body` styles — but keep a full-bleed sheet instead of the 360dp dialog, because their field stacks need the canvas width. Their focus chains are unchanged.
 
 ### CI secrets
 

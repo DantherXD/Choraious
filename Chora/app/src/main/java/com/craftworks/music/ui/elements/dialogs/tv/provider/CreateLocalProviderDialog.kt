@@ -127,7 +127,7 @@ fun CreateLocalProviderDialog(
                     headlineContent = {
                         Text(
                             text = "..",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = LocalTvTypography.current.body
                         )
                     },
                     leadingContent = {
@@ -158,7 +158,7 @@ fun CreateLocalProviderDialog(
                         headlineContent = {
                             Text(
                                 text = dir.name,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = LocalTvTypography.current.body,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

@@ -65,6 +65,8 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.craftworks.music.R
+import com.craftworks.music.ui.theme.tv.LocalTvColors
+import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 
 private enum class DialogMenu { MAIN, ADD_TO_PLAYLIST, NEW_PLAYLIST, SET_RATING }
@@ -84,7 +86,7 @@ fun SongDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = LocalTvColors.current.bgCanvas
 
     var dialogMenu by remember { mutableStateOf(DialogMenu.MAIN) }
 
@@ -319,13 +321,13 @@ private fun NewPlaylist(
     var playlistName by remember { mutableStateOf("") }
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedBorderColor = LocalTvColors.current.accent,
         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
         errorBorderColor = MaterialTheme.colorScheme.error,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        errorTextColor = MaterialTheme.colorScheme.error
+        cursorColor = LocalTvColors.current.accent,
+        focusedTextColor = LocalTvColors.current.labelPrimary,
+        unfocusedTextColor = LocalTvColors.current.labelSecondary,
+        errorTextColor = LocalTvColors.current.destructive
     )
 
     Column(
