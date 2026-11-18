@@ -5,9 +5,19 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# A new push to the same branch replaces the run that is still going.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: assembleFossDebug
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -17,7 +27,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: "21"
 
       - name: Set up Gradle (with caching)
         uses: gradle/actions/setup-gradle@v4
@@ -25,13 +35,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
-        # `foss` only: the `sfpro` flavor needs licensed fonts that are not in the repo.
+      - name: Build debug APK (foss flavor)
+        # `foss` only: the `sfpro` flavor needs licensed SF Pro Display files that are
+        # deliberately kept out of the repo (app/src/sfpro/FONTS.md), so it cannot build here.
+        # The Android SDK platform/build-tools for compileSdk 37 are provisioned by AGP.
         run: ./gradlew assembleFossDebug
 
       - name: Upload APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
+          name: app-foss-debug
           path: app/build/outputs/apk/foss/debug/app-foss-debug.apk
-          archive: false
           if-no-files-found: error
+          retention-days: 14
