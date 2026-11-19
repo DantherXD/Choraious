@@ -64,7 +64,12 @@ fun TvAlbumScreen(
 
     fun queue(album: MediaItem, playNext: Boolean) {
         scope.launch {
-            val songs = viewModel.getAlbum(album.mediaMetadata.id ?: return@launch).drop(1)
+            // Provider/network failure must not escape this coroutine and crash the screen.
+            val songs = runCatching { viewModel.getAlbum(album.mediaMetadata.id.orEmpty()) }
+                .onFailure { android.util.Log.e("TV-ALBUMS", "Could not load album", it) }
+                .getOrNull()
+                ?.drop(1)
+                .orEmpty()
             if (songs.isEmpty()) return@launch
             if (playNext) SongHelper.playNext(songs, mediaController)
             else SongHelper.enqueue(songs, mediaController)

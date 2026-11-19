@@ -1,5 +1,6 @@
 package com.craftworks.music.ui.screens.tv
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -74,7 +75,11 @@ fun TvPlaylistDetails(
     var showSongDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedPlaylistId) {
-        if (selectedPlaylistId != null) viewModel.loadPlaylistDetails(selectedPlaylistId)
+        if (selectedPlaylistId != null) {
+            // Provider/network failure must not throw inside the effect and crash the screen.
+            runCatching { viewModel.loadPlaylistDetails(selectedPlaylistId) }
+                .onFailure { Log.e("TV-PLAYLIST", "Could not load playlist $selectedPlaylistId", it) }
+        }
     }
 
     val collapse by remember(listState, collapseDistancePx) {

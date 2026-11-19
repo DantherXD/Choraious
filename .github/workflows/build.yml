@@ -50,28 +50,70 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Restore the release signing key
-        # One keystore signs every published APK. Store it base64-encoded in the
-        # CHORA_KEYSTORE_BASE64 secret; the passwords/alias are separate secrets.
+      - name: Cache the CI signing key
+        # A debug keystore is generated fresh on every runner, so without this cache each build got
+        # a different certificate and Android refused the next one as an update
+        # (INSTALL_FAILED_UPDATE_INCOMPATIBLE). One cached key keeps one signature forever.
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/chora-ci.jks
+          key: chora-ci-signing-keystore-v1
+
+      - name: Resolve the signing key
+        # One key signs every published APK. Preferred: your own keystore, base64-encoded in
+        # CHORA_KEYSTORE_BASE64 with CHORA_KEY_ALIAS / CHORA_KEYSTORE_PASSWORD / CHORA_KEY_PASSWORD.
+        # Fallback: the cached CI key below, created once on the first run and reused after that.
+        # Values go to GITHUB_ENV because the build step no longer sets them itself (an unset secret
+        # would overwrite the fallback with an empty string and silently switch to debug signing).
         working-directory: .
         env:
           KEYSTORE_BASE64: ${{ secrets.CHORA_KEYSTORE_BASE64 }}
+          SECRET_KEY_ALIAS: ${{ secrets.CHORA_KEY_ALIAS }}
+          SECRET_KEYSTORE_PASSWORD: ${{ secrets.CHORA_KEYSTORE_PASSWORD }}
+          SECRET_KEY_PASSWORD: ${{ secrets.CHORA_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$SECRET_KEY_ALIAS" ] && [ -n "$SECRET_KEYSTORE_PASSWORD" ]; then
             printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/chora-release.jks"
-            echo "CHORA_KEYSTORE_FILE=$RUNNER_TEMP/chora-release.jks" >> "$GITHUB_ENV"
-          else
-            echo "::notice::CHORA_KEYSTORE_BASE64 is not set; the release APK will be signed with the debug key."
+            {
+              echo "CHORA_KEYSTORE_FILE=$RUNNER_TEMP/chora-release.jks"
+              echo "CHORA_KEY_ALIAS=$SECRET_KEY_ALIAS"
+              echo "CHORA_KEYSTORE_PASSWORD=$SECRET_KEYSTORE_PASSWORD"
+              echo "CHORA_KEY_PASSWORD=${SECRET_KEY_PASSWORD:-$SECRET_KEYSTORE_PASSWORD}"
+              echo "SIGNING_KEY=project secrets"
+            } >> "$GITHUB_ENV"
+            exit 0
           fi
+          mkdir -p "$HOME/.android"
+          {
+            echo "CHORA_KEYSTORE_FILE=$HOME/.android/chora-ci.jks"
+            echo "CHORA_KEY_ALIAS=chora-ci"
+            echo "CHORA_KEYSTORE_PASSWORD=chora-ci"
+            echo "CHORA_KEY_PASSWORD=chora-ci"
+            echo "SIGNING_KEY=cached CI key"
+          } >> "$GITHUB_ENV"
+          echo "::warning::CHORA_KEYSTORE_BASE64 is not set; this APK is signed with the cached CI key, not with a key you own."
+
+      - name: Create the CI signing key if this repository has none yet
+        working-directory: .
+        run: |
+          if [ -f "$CHORA_KEYSTORE_FILE" ]; then
+            echo "Reusing the existing key at $CHORA_KEYSTORE_FILE."
+            exit 0
+          fi
+          keytool -genkeypair \
+            -keystore "$CHORA_KEYSTORE_FILE" \
+            -storepass "$CHORA_KEYSTORE_PASSWORD" \
+            -keypass "$CHORA_KEY_PASSWORD" \
+            -alias "$CHORA_KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Chora CI, O=Chora, C=US"
+          echo "Created a new CI signing key; every later run reuses it from the cache."
 
       - name: Build release APK (foss flavor)
         # `foss` only: the `sfpro` flavor needs licensed SF Pro Display files that are
         # deliberately kept out of the repo (app/src/sfpro/FONTS.md), so it cannot build here.
         # The Android SDK platform/build-tools for compileSdk 37 are provisioned by AGP.
-        env:
-          CHORA_KEYSTORE_PASSWORD: ${{ secrets.CHORA_KEYSTORE_PASSWORD }}
-          CHORA_KEY_ALIAS: ${{ secrets.CHORA_KEY_ALIAS }}
-          CHORA_KEY_PASSWORD: ${{ secrets.CHORA_KEY_PASSWORD }}
+        # Signing variables come from the previous steps through $GITHUB_ENV.
         run: ./gradlew assembleFossRelease
 
       - name: Check the APK was produced
@@ -87,12 +129,29 @@ jobs:
           fi
           size=$(du -h "$apk" | cut -f1)
           sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          # The signing certificate is the thing Android compares when updating an installed app,
+          # so it goes on the run page: a changing digest is the cause of
+          # INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+          apksigner_bin=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -maxdepth 2 -name apksigner 2>/dev/null | sort | tail -1)
+          if [ -n "$apksigner_bin" ]; then
+            cert=$("$apksigner_bin" verify --print-certs "$apk" | awk -F': ' '/certificate SHA-256 digest/{print $2; exit}')
+          else
+            cert="(apksigner not found on the runner)"
+          fi
           {
             echo "### Chora foss release APK"
             echo ""
             echo "| file | size | sha256 |"
             echo "| --- | --- | --- |"
             echo "| \`app-foss-release.apk\` | $size | \`$sha\` |"
+            echo ""
+            echo "| signing key | certificate SHA-256 |"
+            echo "| --- | --- |"
+            echo "| ${SIGNING_KEY:-unknown} | \`${cert:-unknown}\` |"
+            echo ""
+            echo "Android only installs an update over an app with the **same** certificate. If an"
+            echo "old copy refuses to update, remove it once with \`adb uninstall com.craftworks.music\`;"
+            echo "later builds reuse this key and then update in place."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the APK artifact

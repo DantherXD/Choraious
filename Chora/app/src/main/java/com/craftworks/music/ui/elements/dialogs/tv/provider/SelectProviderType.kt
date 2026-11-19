@@ -2,6 +2,10 @@ package com.craftworks.music.ui.elements.dialogs.tv.provider
 
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.Wallpapers
@@ -31,6 +35,10 @@ fun SelectProviderType(
     setShowDialog: (Boolean) -> Unit = { },
     selectProvider: (ProviderType) -> Unit = { },
 ) {
+    // A picker needs a visible choice: the rows used to hardcode `selected = false` and the Next
+    // button was permanently disabled, so picking Navidrome gave no feedback at all.
+    var selected by remember { mutableStateOf<ProviderType?>(null) }
+
     Dialog(
         onDismissRequest = { setShowDialog(false) },
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -42,15 +50,15 @@ fun SelectProviderType(
         ) {
             TvDialogOptionRow(
                 label = "OpenSubsonic/Navidrome",
-                selected = false,
+                selected = selected == ProviderType.SUBSONIC,
                 leadingIconRes = R.drawable.s_m_opensubsonic_bw,
-                onClick = { selectProvider(ProviderType.SUBSONIC) },
+                onClick = { selected = ProviderType.SUBSONIC },
             )
             TvDialogOptionRow(
                 label = stringResource(R.string.source_local_folder),
-                selected = false,
+                selected = selected == ProviderType.LOCAL_FOLDER,
                 leadingIconRes = R.drawable.s_m_local_filled,
-                onClick = { selectProvider(ProviderType.LOCAL_FOLDER) },
+                onClick = { selected = ProviderType.LOCAL_FOLDER },
             )
 
             TvDialogActions {
@@ -61,8 +69,8 @@ fun SelectProviderType(
                 TvGlassButton(
                     text = stringResource(R.string.action_next),
                     style = TvButtonStyle.Primary,
-                    enabled = false,
-                    onClick = { },
+                    enabled = selected != null,
+                    onClick = { selected?.let(selectProvider) },
                 )
             }
         }

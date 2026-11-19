@@ -183,10 +183,20 @@ fun Modifier.tvDpadScrollOnEdge(state: ScrollableState): Modifier {
         if (!canScroll) return@onPreviewKeyEvent false
 
         scope.launch {
-            state.scrollBy(if (direction == FocusDirection.Down) stepPx else -stepPx)
-            // The scrolled slice has to be laid out before focus search can see it.
-            withFrameNanos { }
-            focusManager.moveFocus(direction)
+            // One press has to reach the next section, not just nudge the list: the gap between
+            // two rails is taller than one step, so keep scrolling until focus actually moves.
+            repeat(MaxScrollSteps) {
+                state.scrollBy(if (direction == FocusDirection.Down) stepPx else -stepPx)
+                // The scrolled slice has to be laid out before focus search can see it.
+                withFrameNanos { }
+                if (focusManager.moveFocus(direction)) return@launch
+                val canContinue = if (direction == FocusDirection.Down) {
+                    state.canScrollForward
+                } else {
+                    state.canScrollBackward
+                }
+                if (!canContinue) return@launch
+            }
         }
         true
     }
@@ -286,6 +296,9 @@ fun Modifier.tvRequestFocusOnFirstAppearance(): Modifier {
 
 /** How long OK must be held for a long press on a D-pad. */
 private const val LongPressMillis = 550L
+
+/** How many `dpadScrollStep`s one DOWN/UP may scroll while looking for the next focus target. */
+private const val MaxScrollSteps = 6
 
 /**
  * D-pad long press, used by tiles, track rows and grids to open the context menu.

@@ -1,5 +1,6 @@
 package com.craftworks.music.ui.screens.tv
 
+import android.util.Log
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,7 +79,11 @@ fun TvArtistDetailsScreen(
     val collapseDistancePx = with(LocalDensity.current) { TvDimens.detailArtworkLarge.toPx() }
 
     LaunchedEffect(selectedArtistId) {
-        if (selectedArtistId != null) viewModel.loadArtistDetails(selectedArtistId)
+        if (selectedArtistId != null) {
+            // Provider/network failure must not take the screen (and the app) down with it.
+            runCatching { viewModel.loadArtistDetails(selectedArtistId) }
+                .onFailure { Log.e("TV-ARTIST", "Could not load artist $selectedArtistId", it) }
+        }
     }
 
     val collapse by remember(gridState, collapseDistancePx) {
@@ -142,10 +147,14 @@ fun TvArtistDetailsScreen(
                             iconRes = R.drawable.round_play_arrow_24,
                             onClick = {
                                 scope.launch {
-                                    val songs: List<MediaItem> = artistAlbums.map { album ->
-                                        viewModel.getAlbum(album.mediaMetadata.id ?: "")
-                                            .drop(1)
-                                    }.flatten()
+                                    val songs: List<MediaItem> = runCatching {
+                                        artistAlbums.map { album ->
+                                            viewModel.getAlbum(album.mediaMetadata.id.orEmpty())
+                                                .drop(1)
+                                        }.flatten()
+                                    }
+                                        .onFailure { Log.e("TV-ARTIST", "Could not load the discography", it) }
+                                        .getOrDefault(emptyList())
 
                                     if (songs.isNotEmpty()) {
                                         SongHelper.play(songs, 0, mediaController)

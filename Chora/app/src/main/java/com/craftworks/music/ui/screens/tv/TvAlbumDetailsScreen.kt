@@ -1,6 +1,7 @@
 package com.craftworks.music.ui.screens.tv
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -89,7 +90,11 @@ fun TvAlbumDetails(
     // The header collapses over roughly the expanded artwork's height, in pixels.
     val collapseDistancePx = with(LocalDensity.current) { TvDimens.detailArtworkLarge.toPx() }
 
-    LaunchedEffect(selectedAlbumId) { viewModel.loadAlbumDetails(selectedAlbumId) }
+    LaunchedEffect(selectedAlbumId) {
+        // A provider/network failure used to throw inside the effect and crash the screen.
+        runCatching { viewModel.loadAlbumDetails(selectedAlbumId) }
+            .onFailure { Log.e("TV-ALBUM", "Could not load album $selectedAlbumId", it) }
+    }
 
     val collapse by remember(listState, collapseDistancePx) {
         derivedStateOf {

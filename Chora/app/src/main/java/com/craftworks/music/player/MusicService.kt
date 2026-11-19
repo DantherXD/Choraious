@@ -124,6 +124,18 @@ class ChoraMediaLibraryService : MediaLibraryService() {
         fun getInstance(): ChoraMediaLibraryService? {
             return instance
         }
+
+        /**
+         * The ExoPlayer, or null while the service is still starting.
+         *
+         * `player` is `lateinit`, so reading it from UI code throws
+         * UninitializedPropertyAccessException whenever the now-playing screen opens before the
+         * player has been created — the first play tap after launch is exactly that moment.
+         */
+        val currentPlayer: Player?
+            get() = instance?.let { service ->
+                if (service::player.isInitialized) service.player else null
+            }
     }
 
     private val rootItem = MediaItem.Builder()

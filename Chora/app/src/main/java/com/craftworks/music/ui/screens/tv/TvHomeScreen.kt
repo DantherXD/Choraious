@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import android.util.Log
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -133,14 +134,19 @@ fun TvHomeScreen(
         scope.launch {
             val albumId = album.mediaMetadata.id ?: return@launch
             // getAlbumSongs returns the album item first, so the tracks start at index 1.
-            val songs = viewModel.getAlbumSongs(albumId).drop(1)
-            if (songs.isNotEmpty()) {
-                SongHelper.play(
-                    mediaItems = if (shuffled) songs.shuffled() else songs,
-                    index = 0,
-                    mediaController = mediaController,
-                )
-            }
+            // The lookup is a provider/network call: if it throws, the exception used to escape
+            // into this coroutine and crash the app the moment Play was pressed.
+            val songs = runCatching { viewModel.getAlbumSongs(albumId) }
+                .onFailure { Log.e("TV-HOME", "Could not load album $albumId", it) }
+                .getOrNull()
+                ?.drop(1)
+                .orEmpty()
+            if (songs.isEmpty()) return@launch
+            SongHelper.play(
+                mediaItems = if (shuffled) songs.shuffled() else songs,
+                index = 0,
+                mediaController = mediaController,
+            )
             navHostController.navigate(Screen.NowPlayingLandscape) { launchSingleTop = true }
         }
     }
@@ -148,7 +154,11 @@ fun TvHomeScreen(
     fun queueAlbum(album: MediaItem, playNext: Boolean) {
         scope.launch {
             val albumId = album.mediaMetadata.id ?: return@launch
-            val songs = viewModel.getAlbumSongs(albumId).drop(1)
+            val songs = runCatching { viewModel.getAlbumSongs(albumId) }
+                .onFailure { Log.e("TV-HOME", "Could not load album $albumId", it) }
+                .getOrNull()
+                ?.drop(1)
+                .orEmpty()
             if (songs.isEmpty()) return@launch
             if (playNext) SongHelper.playNext(songs, mediaController)
             else SongHelper.enqueue(songs, mediaController)

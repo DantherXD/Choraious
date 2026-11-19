@@ -156,7 +156,9 @@ fun TvNowPlaying(
         .collectAsStateWithLifecycle(OLEDProtectionMode.OFF)
     val lyrics by LyricsState.lyrics.collectAsStateWithLifecycle()
 
-    val player: Player? = mediaController ?: ChoraMediaLibraryService.getInstance()?.player
+    // `currentPlayer` instead of `.player`: the lateinit read throws if the service is still
+    // starting, which is exactly when the first play tap lands here.
+    val player: Player? = mediaController ?: ChoraMediaLibraryService.currentPlayer
 
     var panel by remember { mutableStateOf(NpPanel.None) }
     var lastPanel by remember { mutableStateOf(NpPanel.None) }
