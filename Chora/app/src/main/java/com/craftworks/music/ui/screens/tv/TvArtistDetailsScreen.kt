@@ -46,6 +46,7 @@ import com.craftworks.music.ui.theme.tv.LocalTvColors
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
 import kotlinx.coroutines.launch
 
@@ -109,7 +110,8 @@ fun TvArtistDetailsScreen(
             columns = GridCells.Fixed(5),
             modifier = Modifier
                 .fillMaxSize()
-                .focusGroup(),
+                .focusGroup()
+                .tvDpadScrollOnEdge(gridState),
             contentPadding = PaddingValues(
                 start = TvDimens.screenMarginHorizontal,
                 end = TvDimens.screenMarginHorizontal,

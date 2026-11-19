@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,6 +58,7 @@ import com.craftworks.music.data.model.id
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.elements.dialogs.tv.SongDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
 import com.craftworks.music.ui.elements.tv.TvArtistCard
@@ -94,6 +96,7 @@ fun TvSearchScreen(
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val (searchFocusRequester, focusRequester) = remember { FocusRequester.createRefs() }
+    val gridState = rememberLazyGridState()
     val searchInteractionSource = remember { MutableInteractionSource() }
     val isSearchFocused by searchInteractionSource.collectIsFocusedAsState()
 
@@ -117,9 +120,11 @@ fun TvSearchScreen(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(5),
+        state = gridState,
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
+            .tvDpadScrollOnEdge(gridState)
             .focusRequester(focusRequester)
             .focusRestorer(focusRequester),
         // Content is drawn under the tab bar, so the first row starts below it.

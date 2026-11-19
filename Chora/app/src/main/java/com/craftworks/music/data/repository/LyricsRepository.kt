@@ -53,15 +53,21 @@ class LyricsRepository @Inject constructor(
                 LyricsState.loading.value = true;
 
                 coroutineScope {
-                    val results = providers.map {
+                    val results = providers.map { provider ->
                         async {
-                            when (it.source) {
-                                LyricSource.MEDIA_PROVIDER -> metadata?.id?.let { metadata.getProvider()?.getLyrics(it) }?.firstOrNull()
-                                LyricSource.LRCLIB -> lrclibDataSource.getLyrics(metadata, ignoreCachedResponse)
-                                LyricSource.LRCRED -> lrcRedDataSource.getLyrics(metadata, ignoreCachedResponse)
-                                LyricSource.UNISON -> unisonLyricsDataSource.getLyrics(metadata, ignoreCachedResponse)
-                                LyricSource.NETEASE -> neteaseDataSource.getLyrics(metadata)
-                            }
+                            // One source failing (offline, unparseable response, provider not set up)
+                            // must not cancel the others, and must never escape: this lookup runs on
+                            // every media-item transition, so an uncaught throw here used to crash
+                            // the app the moment a song started playing.
+                            runCatching {
+                                when (provider.source) {
+                                    LyricSource.MEDIA_PROVIDER -> metadata?.id?.let { metadata.getProvider()?.getLyrics(it) }?.firstOrNull()
+                                    LyricSource.LRCLIB -> lrclibDataSource.getLyrics(metadata, ignoreCachedResponse)
+                                    LyricSource.LRCRED -> lrcRedDataSource.getLyrics(metadata, ignoreCachedResponse)
+                                    LyricSource.UNISON -> unisonLyricsDataSource.getLyrics(metadata, ignoreCachedResponse)
+                                    LyricSource.NETEASE -> neteaseDataSource.getLyrics(metadata)
+                                }
+                            }.getOrNull()
                         }
                     }.awaitAll().filterNotNull()
 

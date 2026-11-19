@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,7 @@ import com.craftworks.music.ui.elements.tv.apple.TvSwitchRow
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import kotlinx.coroutines.launch
 
 /**
@@ -60,6 +62,7 @@ fun TvS_AppearanceScreen() {
     val type = LocalTvTypography.current
     val manager = remember(context) { AppearanceSettingsManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     var showOledDialog by remember { mutableStateOf(false) }
 
@@ -79,7 +82,10 @@ fun TvS_AppearanceScreen() {
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .tvDpadScrollOnEdge(listState),
         contentPadding = PaddingValues(
             start = TvDimens.screenMarginHorizontal,
             end = TvDimens.screenMarginHorizontal,

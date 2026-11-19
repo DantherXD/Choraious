@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import com.craftworks.music.ui.theme.tv.LocalTvColors
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.viewmodels.BrowseViewModel
 
 /**
@@ -72,9 +74,13 @@ fun TvBrowseScreen(
     val genreAlbums by viewModel.genreAlbums.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isEmpty by viewModel.isEmpty.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .tvDpadScrollOnEdge(listState),
         contentPadding = PaddingValues(
             start = TvDimens.screenMarginHorizontal,
             end = TvDimens.screenMarginHorizontal,

@@ -62,8 +62,10 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -203,8 +205,20 @@ class ChoraMediaLibraryService : MediaLibraryService() {
 
     private var rootHierarchy = mutableListOf<MediaItem>()
 
-    private val serviceMainScope = CoroutineScope(Dispatchers.Main)
-    private val serviceIOScope = CoroutineScope(Dispatchers.IO)
+    /**
+     * Background work (lyrics, scrobbling, library sync) runs on a supervisor with a logging
+     * handler. A plain `CoroutineScope(Dispatchers.IO)` has neither, so one throw inside a launched
+     * child cancels the scope and reaches the default uncaught-exception handler — which kills the
+     * process. Playing a track launches a lyrics fetch and a scrobble immediately, so a flaky
+     * lyrics source or a dropped connection was enough to crash the app the moment a song started.
+     */
+    private val serviceScopeHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e("CHORA-SERVICE", "Background task failed", throwable)
+    }
+    private val serviceMainScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Main + serviceScopeHandler)
+    private val serviceIOScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.IO + serviceScopeHandler)
 
     var aHomeScreenItems = mutableListOf<MediaItem>()
     var aAlbumScreenItems = mutableListOf<MediaItem>()
@@ -348,9 +362,14 @@ class ChoraMediaLibraryService : MediaLibraryService() {
                 super.onMediaItemTransition(mediaItem, reason)
 
                 serviceIOScope.launch {
-                    lyricsRepository.getLyrics(mediaItem?.mediaMetadata)
+                    // Each call is isolated: a failing lyrics provider or an unreachable server has
+                    // to degrade to "no lyrics / no scrobble", never to a dead player.
+                    runCatching { lyricsRepository.getLyrics(mediaItem?.mediaMetadata) }
+                        .onFailure { Log.e("CHORA-SERVICE", "Lyrics lookup failed", it) }
                     val mediaId = mediaItem?.mediaMetadata?.id ?: return@launch
-                    songRepository.scrobbleSong(mediaId, 0, 1f, ScrobbleEvent.START, false)
+                    runCatching {
+                        songRepository.scrobbleSong(mediaId, 0, 1f, ScrobbleEvent.START, false)
+                    }.onFailure { Log.e("CHORA-SERVICE", "Scrobble failed", it) }
                 }
 
                 /*

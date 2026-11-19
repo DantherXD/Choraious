@@ -43,6 +43,7 @@ import com.craftworks.music.ui.elements.tv.apple.TvGlassButton
 import com.craftworks.music.ui.elements.tv.apple.TvTrackRow
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 import com.craftworks.music.utils.StringUtils
 import kotlinx.coroutines.launch
@@ -99,7 +100,9 @@ fun TvPlaylistDetails(
         } else {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .tvDpadScrollOnEdge(listState),
                 contentPadding = PaddingValues(
                     start = TvDimens.screenMarginHorizontal,
                     end = TvDimens.screenMarginHorizontal,

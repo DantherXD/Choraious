@@ -1,5 +1,6 @@
 @file:OptIn(UnstableApi::class) package com.craftworks.music.player
 
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -14,19 +15,29 @@ class SongHelper {
                 return
 
             withContext(Dispatchers.Main) {
-                mediaController?.setMediaItems(mediaItems, index, 0)
-                mediaController?.prepare()
-                mediaController?.play()
+                // Called from click handlers' coroutines, where an exception is not caught by
+                // anything: a controller that has gone away mid-click used to take the whole app
+                // down instead of surfacing as a player error.
+                runCatching {
+                    mediaController?.setMediaItems(mediaItems, index, 0)
+                    mediaController?.prepare()
+                    mediaController?.play()
+                }.onFailure {
+                    Log.e("SONG-HELPER", "Could not start playback", it)
+                }
             }
         }
         fun enqueue(mediaItems: List<MediaItem>, mediaController: MediaController?) {
-            mediaController?.addMediaItems(mediaItems)
+            runCatching { mediaController?.addMediaItems(mediaItems) }
+                .onFailure { Log.e("SONG-HELPER", "Could not enqueue items", it) }
         }
         fun playNext(mediaItems: List<MediaItem>, mediaController: MediaController?) {
-            mediaController?.addMediaItems(
-                mediaController.currentMediaItemIndex + 1,
-                mediaItems
-            )
+            runCatching {
+                mediaController?.addMediaItems(
+                    mediaController.currentMediaItemIndex + 1,
+                    mediaItems
+                )
+            }.onFailure { Log.e("SONG-HELPER", "Could not queue items next", it) }
         }
     }
 }

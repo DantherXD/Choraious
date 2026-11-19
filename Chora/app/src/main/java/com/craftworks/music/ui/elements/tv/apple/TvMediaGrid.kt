@@ -26,6 +26,7 @@ import com.craftworks.music.ui.theme.tv.LocalTvLargeText
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import kotlinx.coroutines.flow.filter
 
 /**
@@ -68,7 +69,8 @@ fun <T> TvMediaGrid(
         columns = GridCells.Fixed(if (LocalTvLargeText.current) 4 else 5),
         modifier = modifier
             .fillMaxSize()
-            .focusGroup(),
+            .focusGroup()
+            .tvDpadScrollOnEdge(gridState),
         contentPadding = PaddingValues(
             start = TvDimens.screenMarginHorizontal,
             end = TvDimens.screenMarginHorizontal,

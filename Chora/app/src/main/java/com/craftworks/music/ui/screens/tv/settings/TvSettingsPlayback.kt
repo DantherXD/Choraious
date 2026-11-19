@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,6 +34,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.managers.settings.PlaybackSettingsManager
 import com.craftworks.music.ui.elements.dialogs.tv.TranscodingBitrateDialog
 import com.craftworks.music.ui.elements.dialogs.tv.TranscodingFormatDialog
@@ -50,6 +52,7 @@ fun TvS_PlaybackScreen() {
     val playbackSettingsManager = remember { PlaybackSettingsManager(context) }
 
     val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     val transcodingBitrateWifi by playbackSettingsManager.wifiTranscodingBitrateFlow.collectAsState("")
     val transcodingBitrateData by playbackSettingsManager.mobileDataTranscodingBitrateFlow.collectAsState("")
@@ -63,7 +66,10 @@ fun TvS_PlaybackScreen() {
     val offloadEnabled by playbackSettingsManager.audioOffloadEnabled.collectAsStateWithLifecycle(true)
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .tvDpadScrollOnEdge(listState),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(
             start = 32.dp,

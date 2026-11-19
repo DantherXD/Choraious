@@ -81,8 +81,12 @@ object TvDimens {
     /** Detail header (spec §6). */
     val detailArtworkLarge = 260.dp
     val detailArtworkCollapsed = 96.dp
-    /** Hero fills the canvas; its text column is capped so 38sp lines stay readable. */
-    val heroHeight = 540.dp
+    /**
+     * Hero height. Not the full 540dp canvas: content starts below the tab-bar inset (~108dp), so a
+     * 540dp hero pushed its own Play/Shuffle row below the fold and left the first rail unreachable
+     * (nothing below the viewport is laid out, so DOWN had no target).
+     */
+    val heroHeight = 400.dp
     val heroTextWidth = 560.dp
     val minTouchTarget = 48.dp
 
@@ -133,6 +137,9 @@ object TvDimens {
     /** Panel-open displacement of the artwork/title block (spec §6.7). */
     val npDisplaceFraction = 0.18f
     val npDisplaceScale = 0.94f
+
+    /** One D-pad step when a list has to be scrolled to reach the next focusable section. */
+    val dpadScrollStep = 120.dp
 
     /** Focus language (spec §4.6). The ring stays 3dp: it is a legibility cue, not a scale cue. */
     val focusRingWidth = 3.dp

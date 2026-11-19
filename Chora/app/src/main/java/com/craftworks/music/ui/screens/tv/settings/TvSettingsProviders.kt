@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.MediaProviderSettingsManager
 import com.craftworks.music.ui.elements.dialogs.tv.provider.ModifyLrcLibProviderDialog
@@ -58,6 +60,9 @@ fun TvS_ProviderScreen() {
 
     var showAddProviderDialog by remember { mutableStateOf(false) }
     var showLrcLibEditDialog by remember { mutableStateOf(false) }
+
+    val mediaListState = rememberLazyListState()
+    val lyricListState = rememberLazyListState()
 
 
     Column(
@@ -92,6 +97,8 @@ fun TvS_ProviderScreen() {
 
         when (selectedTab) {
             0 -> LazyColumn(
+                state = mediaListState,
+                modifier = Modifier.tvDpadScrollOnEdge(mediaListState),
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -116,6 +123,8 @@ fun TvS_ProviderScreen() {
             }
 
             1 -> LazyColumn(
+                state = lyricListState,
+                modifier = Modifier.tvDpadScrollOnEdge(lyricListState),
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

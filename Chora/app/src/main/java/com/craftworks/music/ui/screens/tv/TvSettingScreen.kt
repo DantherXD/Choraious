@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import com.craftworks.music.ui.elements.tv.apple.TvSettingsSection
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 
 /**
  * The TV settings hub (spec §6.8/P4-1).
@@ -61,11 +63,14 @@ fun TvSettingScreen(
     }.collectAsStateWithLifecycle(initialValue = "Username")
 
     var showNameDialog by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .focusRestorer(),
+            .focusRestorer()
+            .tvDpadScrollOnEdge(listState),
         contentPadding = PaddingValues(
             start = TvDimens.screenMarginHorizontal,
             end = TvDimens.screenMarginHorizontal,

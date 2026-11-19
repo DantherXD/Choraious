@@ -62,6 +62,7 @@ import com.craftworks.music.ui.theme.tv.LocalTvColors
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.tv.tvRequestFocusOnFirstAppearance
 import com.craftworks.music.ui.viewmodels.HomeScreenViewModel
 import kotlinx.coroutines.launch
@@ -157,7 +158,9 @@ fun TvHomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .tvDpadScrollOnEdge(listState),
             contentPadding = PaddingValues(
                 start = TvDimens.screenMarginHorizontal,
                 end = TvDimens.screenMarginHorizontal,
@@ -278,6 +281,9 @@ private fun Hero(
         TvArtwork(
             data = album.artworkUrlAt(1280),
             cacheKey = album.artworkKey,
+            // No crossfade: the hero repaints on every return to Listen Now, and the fade-in read
+            // as the home screen animating itself rather than as artwork loading.
+            crossfade = false,
             modifier = Modifier.fillMaxSize(),
         )
 

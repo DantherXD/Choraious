@@ -46,6 +46,7 @@ import com.craftworks.music.ui.theme.tv.LocalTvColors
 import com.craftworks.music.ui.theme.tv.LocalTvTypography
 import com.craftworks.music.ui.theme.tv.TvDimens
 import com.craftworks.music.ui.tv.LocalTvTopInset
+import com.craftworks.music.ui.tv.tvDpadScrollOnEdge
 import com.craftworks.music.ui.viewmodels.SongsScreenViewModel
 import kotlinx.coroutines.launch
 
@@ -83,7 +84,9 @@ fun TvSongsScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .tvDpadScrollOnEdge(listState),
             contentPadding = PaddingValues(
                 start = TvDimens.screenMarginHorizontal,
                 end = TvDimens.screenMarginHorizontal,

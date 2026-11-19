@@ -3,6 +3,8 @@ package com.craftworks.music.ui.tv
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.foundation.gestures.ScrollableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
@@ -14,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -26,7 +29,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,6 +38,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import com.craftworks.music.ui.theme.tv.LocalReduceMotion
@@ -97,17 +102,12 @@ fun Modifier.tvFocusScale(
 }
 
 /**
- * Spec §4.6 halo: a 3dp ring at white 90% that sits **outside** the element's clip, plus an
- * 8dp glow at white 12% outside the ring.
+ * The focus ring: a 3dp white ring drawn **inside** the element's own edge.
  *
- * The shape's outline is stroked on a slightly enlarged copy of itself, so the stroke lands
- * outside the clip instead of straddling it (a plain `Modifier.border` draws inside). The
- * canvas scale also scales the stroke width, so each width is divided by its own factor to
- * keep the ring at exactly 3dp.
- *
- * The halo is a draw-time effect and never changes the layout: it can overflow the element's
- * bounds, so the caller needs at least 11dp of empty space around the element (rail gap 32dp
- * and grid gaps cover this).
+ * It used to be stroked on an enlarged copy of the shape with a glow outside it, which read as a
+ * second, bigger button sitting behind the focused one — the "selection shade is bigger than the
+ * button" report. A double-width stroke clipped to the shape leaves the full ring visible while
+ * the ring, the fill and the button all keep one silhouette; the focus scale alone signals depth.
  */
 @Composable
 fun Modifier.tvFocusHalo(
@@ -126,34 +126,69 @@ fun Modifier.tvFocusHalo(
     return drawWithContent {
         drawContent()
         if (alpha <= 0.01f) return@drawWithContent
-
-        val shortest = minOf(size.width, size.height)
-        if (shortest <= 0f) return@drawWithContent
+        if (size.width <= 0f || size.height <= 0f) return@drawWithContent
 
         val outline = shape.createOutline(Size(size.width, size.height), layoutDirection, this)
-        val path = Path().apply { addOutline(outline) }
+        val path = Path()
+        path.addOutline(outline)
 
+        // Stroke centred on the outline at twice the ring width, clipped to the shape: half of the
+        // stroke is outside the clip, so exactly `focusRingWidth` remains visible on the inside.
         val ringWidth = TvDimens.focusRingWidth.toPx()
-        val glowWidth = TvDimens.focusGlowWidth.toPx()
-
-        // Centre each stroke at its distance from the original edge, then compensate the width.
-        val glowScale = 1f + 2f * (ringWidth + glowWidth / 2f) / shortest
-        scale(glowScale, glowScale, center) {
-            drawPath(
-                path = path,
-                color = colors.focusGlow.copy(alpha = colors.focusGlow.alpha * alpha),
-                style = Stroke(width = glowWidth / glowScale),
-            )
-        }
-
-        val ringScale = 1f + ringWidth / shortest
-        scale(ringScale, ringScale, center) {
+        clipPath(path) {
             drawPath(
                 path = path,
                 color = colors.focusRing.copy(alpha = colors.focusRing.alpha * alpha),
-                style = Stroke(width = ringWidth / ringScale),
+                style = Stroke(width = ringWidth * 2f),
             )
         }
+    }
+}
+
+/**
+ * Vertical D-pad scrolling for a focusable list whose next section may sit below the fold.
+ *
+ * Focus search only sees nodes that have been laid out. The TV canvas is 960×540dp and several
+ * screens open with a block taller than the viewport (Listen Now's hero, the 260dp detail header),
+ * so the rows underneath are never composed and DOWN did nothing anywhere except the tab bar and
+ * the now-playing transport. When a directional move finds nothing but the list can still scroll,
+ * this reveals the next slice and retries the move — the behaviour a D-pad list is expected to have.
+ *
+ * Applied to the scroll container, so it runs before the focused child and before Compose's own
+ * focus handling: a move that succeeds is consumed here (no double step), and a move that fails
+ * scrolls only when there is something left to scroll to.
+ */
+@Composable
+fun Modifier.tvDpadScrollOnEdge(state: ScrollableState): Modifier {
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    val stepPx = with(LocalDensity.current) { TvDimens.dpadScrollStep.toPx() }
+
+    return onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+
+        val direction = when (event.key) {
+            Key.DirectionDown -> FocusDirection.Down
+            Key.DirectionUp -> FocusDirection.Up
+            else -> return@onPreviewKeyEvent false
+        }
+
+        if (focusManager.moveFocus(direction)) return@onPreviewKeyEvent true
+
+        val canScroll = if (direction == FocusDirection.Down) {
+            state.canScrollForward
+        } else {
+            state.canScrollBackward
+        }
+        if (!canScroll) return@onPreviewKeyEvent false
+
+        scope.launch {
+            state.scrollBy(if (direction == FocusDirection.Down) stepPx else -stepPx)
+            // The scrolled slice has to be laid out before focus search can see it.
+            withFrameNanos { }
+            focusManager.moveFocus(direction)
+        }
+        true
     }
 }
 
