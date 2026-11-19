@@ -1286,8 +1286,8 @@ code:
 | --- | --- |
 | P5-1 motion tuning | Done in code. `TvNowPlaying` no longer hardcodes specs: artwork crossfade, panel slide, panel tint, transport fade and the reduced-motion fades come from `TvMotion`. New tokens `stepChange` / `stepSlide` (onboarding step transitions, 350 ms cubic in-out), `panelSlide` (IntOffset flavour of `panelIn`) and `reducedFade` (the 120 ms fade that is still allowed under reduce motion). The TV onboarding transition also consults `LocalReduceMotion` now, which it did not before. |
 | P5-4 a11y / focus order | Focus order fixed by the traversal change above. TalkBack pass and 1.3× Large Text still need a device. |
-| P5-5 fallback pass | Code path unchanged and compiling (`GlassTier.Solid` / `BlurOnly` in `TvGlass.kt`); forcing a tier needs a device or a temporary debug override, which P5-6 removed. |
-| P5-6 cleanup | `rg` over `ui/tv`, `ui/screens/tv`, `ui/elements/tv`, `ui/theme/tv`: no `TvSideNavigation`, no probe/debug tier override, no `SDK_INT` outside `TvGlass.kt`, no raw `fontSize` (the two hits derive from `TvTypography`), unused `focusGroup` import dropped. |
+| P5-5 fallback pass | Code path unchanged and compiling (`GlassTier.Solid` / `BlurOnly` in `TvGlass.kt`). The P0 probe that used to force a tier through a launch extra is gone as of P5-6 (it could never run: `BuildConfig.DEBUG` is `false` in both build types because `debug { isDebuggable = false }`). To force a tier for this check, temporarily wrap the content in `CompositionLocalProvider(LocalGlassTier provides GlassTier.Solid)` inside `TvAppScaffold`, look at it, then revert — it is a two-line, throwaway edit, not a shipped branch. |
+| P5-6 cleanup | `rg` over `ui/tv`, `ui/screens/tv`, `ui/elements/tv`, `ui/theme/tv`: no `TvSideNavigation`, no probe/debug tier override, no `SDK_INT` outside `TvGlass.kt` — one deliberate exception, `ui/elements/dialogs/tv/AppearanceDialogs.kt`, which greys out the *phone* animated-blur background on API < 33 exactly as the phone dialog does (a platform-capability check for a shipped setting, not a glass-tier decision) — no raw `fontSize` (every hit derives from `TvTypography`), unused `focusGroup` import dropped. The probe claim only became true later: `ui/theme/tv/TvGlassProbe.kt` and its `MainActivity` branch (`showGlassProbe`, two imports) were still in the tree and are now deleted — `BuildConfig.DEBUG` is `false` in the `debug` type too, so the surface was unreachable dead code that only shipped bits. `assembleFossDebug` green afterwards (APK 20,521,480 B). |
 | P5-2 glass tuning, P5-3 perf numbers, P5-7 final QA | **Owed.** All three need a real device. `gfxinfo` on a software-rendered emulator measures the emulator, not the app. |
 
 ### Verification actually performed
@@ -1313,3 +1313,19 @@ adb shell input keyevent KEYCODE_DPAD_RIGHT   # walk to Library, CENTER to selec
 adb shell input keyevent KEYCODE_BACK         # a tab root sends focus into the bar
 adb shell input keyevent KEYCODE_DPAD_DOWN    # expect the first content item to light up
 ```
+
+### Where the built APK actually is
+
+A green run used to leave nothing downloadable: `assembleFossRelease` ran, but the only publish
+step was gated on a `v*` tag or a manual `publish=true`, so a normal push threw the APK away with
+the runner. That is fixed in `.github/workflows/build.yml`:
+
+| Step | What it gives you |
+| --- | --- |
+| *Check the APK was produced* | Fails next to the cause if `Chora/app/build/outputs/apk/foss/release/app-foss-release.apk` ever moves, and puts size + sha256 on the run page. |
+| *Upload the APK artifact* (`actions/upload-artifact@v4`, every run) | A 30-day `chora-foss-release-apk` download. GitHub always serves artifacts as a `.zip`. |
+| *Publish the APK to a release* (`softprops/action-gh-release@v3`) | The raw `.apk` on the rolling `latest-build` prerelease for every push to the default branch — same asset name, overwritten in place, so the download URL is stable. A `v*` tag gets its own release; a manual run with `publish=true` gets `build-<run_number>`. |
+
+Verified locally, not only in CI: `./gradlew :app:assembleFossRelease` → BUILD SUCCESSFUL in
+5m 20s producing `app-foss-release.apk` (5,683,256 B) at exactly the path the workflow uploads;
+`./gradlew :app:assembleFossDebug` green after the P5-6 probe deletion (20,521,480 B).

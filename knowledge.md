@@ -28,9 +28,23 @@ Run from `Chora/`. Requires JDK 21 and an Android SDK with platform 37 (create
   declared but there is nothing to run; do not claim test coverage.
 
 CI: `.github/workflows/build.yml` **at the repository root** (GitHub ignores a workflow nested in
-`Chora/`) builds `assembleFossDebug` on push/PR with JDK 21. Its run steps use
-`working-directory: Chora`, and the uploaded artifact path is
-`Chora/app/build/outputs/apk/foss/debug/app-foss-debug.apk`.
+`Chora/`) builds `assembleFossRelease` on push/PR with JDK 21. Its run steps use
+`working-directory: Chora`. The APK lands at
+`Chora/app/build/outputs/apk/foss/release/app-foss-release.apk`, and three things make it
+downloadable from the run page:
+
+- a *Check the APK was produced* step that fails the job if the output path ever changes, and
+  writes size + sha256 to the step summary;
+- an `actions/upload-artifact@v4` step on **every** run (`chora-foss-release-apk`, 30 days).
+  GitHub always hands artifacts out as a `.zip`;
+- a `softprops/action-gh-release@v3` step that uploads the **raw** `.apk` to the rolling
+  `latest-build` prerelease on every push to the default branch (asset overwritten in place, so
+  the download URL is stable). A `v*` tag gets its own release, and a manual run with
+  `publish=true` gets `build-<run_number>`.
+
+A green run used to leave no downloadable APK at all: the build step ran, but the only publish
+step was gated on a `v*` tag or `publish=true`, so a normal push threw the APK away with the
+runner.
 
 Version bumps: edit `versionCode` / `versionName` manually in `app/build.gradle.kts`
 (currently 311 / 1.31.1).

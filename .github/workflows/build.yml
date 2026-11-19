@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish the signed APK as a GitHub Release asset"
+        description: "Publish the signed APK as a numbered GitHub Release asset"
         type: boolean
         default: false
 
@@ -74,14 +74,62 @@ jobs:
           CHORA_KEY_PASSWORD: ${{ secrets.CHORA_KEY_PASSWORD }}
         run: ./gradlew assembleFossRelease
 
-      - name: Publish the APK as a release asset
-        # A release asset is the raw .apk. Actions artifacts are always zipped, which is why
-        # this does not use upload-artifact.
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish == true
-        uses: softprops/action-gh-release@v2
+      - name: Check the APK was produced
+        # A green build is not a download. Fail here, next to the cause, if the flavor/build-type
+        # output name ever changes, and put size + checksum on the run page.
+        working-directory: .
+        run: |
+          apk=Chora/app/build/outputs/apk/foss/release/app-foss-release.apk
+          if [ ! -f "$apk" ]; then
+            echo "::error::$apk was not produced; check app/build.gradle.kts for a renamed output."
+            ls -R Chora/app/build/outputs/apk || true
+            exit 1
+          fi
+          size=$(du -h "$apk" | cut -f1)
+          sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          {
+            echo "### Chora foss release APK"
+            echo ""
+            echo "| file | size | sha256 |"
+            echo "| --- | --- | --- |"
+            echo "| \`app-foss-release.apk\` | $size | \`$sha\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the APK artifact
+        # Runs on every build, so the APK is never thrown away with the runner. GitHub always
+        # wraps artifacts in a .zip; the raw .apk is the release asset published below.
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Build {0}', github.run_number) }}
+          name: chora-foss-release-apk
+          path: Chora/app/build/outputs/apk/foss/release/app-foss-release.apk
+          if-no-files-found: error
+          # An APK is already a compressed zip; storing it saves a pointless re-compress.
+          compression-level: 0
+          retention-days: 30
+
+      - name: Publish the APK to a release
+        # `latest-build` is re-uploaded (asset overwritten) on every push to the default branch, so
+        # there is always one stable link to a raw, installable .apk. Version tags get their own
+        # release, and a manual run can ask for a numbered one.
+        # Actions artifacts are always zipped, which is why this does not use upload-artifact alone.
+        if: >-
+          github.event_name != 'pull_request' && (
+            startsWith(github.ref, 'refs/tags/v') ||
+            github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+            inputs.publish == true
+          )
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: >-
+            ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name ||
+                (inputs.publish == true && format('build-{0}', github.run_number) || 'latest-build') }}
+          name: >-
+            ${{ startsWith(github.ref, 'refs/tags/v') && format('Chora {0}', github.ref_name) ||
+                (inputs.publish == true && format('Build {0}', github.run_number) || 'Latest Chora build') }}
+          body: >-
+            ${{ !startsWith(github.ref, 'refs/tags/v') &&
+                format('Built from `{0}` on `{1}` by run #{2}.', github.sha, github.ref_name, github.run_number) || '' }}
+          generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/v') }}
           files: Chora/app/build/outputs/apk/foss/release/app-foss-release.apk
-          generate_release_notes: true
+          fail_on_unmatched_files: true
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}

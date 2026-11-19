@@ -91,8 +91,6 @@ import com.craftworks.music.ui.playing.NowPlayingContent
 import com.craftworks.music.ui.playing.NowPlayingMiniPlayer
 import com.craftworks.music.ui.playing.dpToPx
 import com.craftworks.music.ui.theme.MusicPlayerTheme
-import com.craftworks.music.ui.theme.tv.TvGlassProbe
-import com.craftworks.music.ui.theme.tv.TvGlassProbeArgs
 import com.gigamole.composefadingedges.FadingEdgesGravity
 import com.gigamole.composefadingedges.content.FadingEdgesContentType
 import com.gigamole.composefadingedges.content.scrollconfig.FadingEdgesScrollConfig
@@ -112,11 +110,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
-
-        // Temporary P0 debug surface (plan P0-DEBUG): debug builds only, opt-in via intent
-        // extra. Never reachable from the UI and removed in P5.
-        val showGlassProbe = BuildConfig.DEBUG &&
-                intent?.getBooleanExtra(TvGlassProbeArgs.EXTRA_ENABLED, false) == true
 
         setContent {
             val selectedThemeName by AppearanceSettingsManager(this).appTheme.collectAsState(
@@ -191,15 +184,11 @@ class MainActivity : ComponentActivity() {
                     // TV canvas is pure black (spec §4.2), not the theme's canvas gradient.
                     window.decorView.setBackgroundColor(Color.Black.toArgb())
 
-                    if (showGlassProbe) {
-                        TvGlassProbe()
-                    } else {
-                        SetupNavGraph(
-                            navController = navController,
-                            bottomPadding = 0.dp,
-                            mediaController = mediaController
-                        )
-                    }
+                    SetupNavGraph(
+                        navController = navController,
+                        bottomPadding = 0.dp,
+                        mediaController = mediaController
+                    )
                 } else {
                     // Set background color to colorScheme.background
                     window.decorView.setBackgroundColor(MaterialTheme.colorScheme.background.toArgb())
